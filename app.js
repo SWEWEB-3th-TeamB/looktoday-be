@@ -5,6 +5,11 @@ const dotenv = require('dotenv');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 
+const authRoutes = require('./routes/auth'); //라우트 연결
+const db = require('./models'); //db
+
+const PORT = process.env.PORT || 3000;
+
 dotenv.config();
 
 const app = express();
@@ -21,6 +26,17 @@ app.get('/', (req, res) => {
     res.send('Hello World');
 });
 
-app.listen(app.get('port'),()=>{
-    console.log(app.get('port'),'번 포트에서 대기 중');
-});
+//라우트 연결 (/api/auth로 들어오는 요청 처리)
+app.use('/api/auth', authRoutes)
+
+db.sequelize.sync()
+  .then(() => {
+    console.log('DB 연결 및 테이블 생성 완료');
+    // 서버 시작 코드 위치
+    app.listen(PORT, () => {
+      console.log(`${PORT}번 포트에서 대기 중`);
+    });
+  })
+  .catch((err) => {
+    console.error('DB 연결 실패:', err);
+  });
