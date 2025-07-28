@@ -40,6 +40,16 @@ class User extends Sequelize.Model {
                 type: DataTypes.FLOAT,
                 allowNull: false
             },
+            //시/도
+            city: {
+                type: Sequelize.STRING(20),
+                allowNull: false
+            },
+            //군/구
+            district: {
+                type: Sequelize.STRING(20),
+                allowNull: false
+            },
 
             //이메일 인증 코드
             verificationCode: {
