@@ -1,0 +1,15 @@
+const express = require('express');
+const router = express.Router();
+
+const looksController = require('../controllers/looks');
+
+// GET /api/looks - 룩 목록 조회(최신순/인기순)
+router.get('/', looksController.getLooks);
+
+// POST /api/looks/:lookId/like - 게시물 좋아요
+router.post('/:looktodayId/like', looksController.likePost);
+
+// DELETE /api/looks/:lookId/like - 게시물 좋아요 취소
+router.delete('/:looktodayId/like', looksController.unlikePost);
+
+module.exports = router;
