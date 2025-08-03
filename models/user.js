@@ -4,6 +4,11 @@ const { DataTypes } = require('sequelize');
 class User extends Sequelize.Model {
     static initiate(sequelize) {
         User.init({
+            user_id: {
+                type: Sequelize.BIGINT,
+                autoIncrement: true,
+                primaryKey: true,
+            },
             //이메일
             email: {
                 type: Sequelize.STRING(40),
@@ -67,6 +72,10 @@ class User extends Sequelize.Model {
             charset: 'utf8',
             collate: 'utf8_general_ci',
         });
+    }
+    static associate(db) {
+        db.User.hasMany(db.Post, { foreignKey: 'user_id', sourceKey: 'user_id' });
+        db.User.hasMany(db.Like, { foreignKey: 'user_id', sourceKey: 'user_id' });
     }
 }
 

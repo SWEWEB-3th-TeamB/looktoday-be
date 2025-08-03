@@ -4,10 +4,10 @@ const sequelize = require('../config/config');
 const db = {};
 
 const User = require('./user');
-const Post = require('./post');
-const Like = require('./like');
-const Weather = require('./weather');
-const Image = require('./image');
+const Post = require('./post.js');
+const Like = require('./like.js');
+const Weather = require('./weather.js');
+const Image = require('./image.js');
 
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
@@ -18,16 +18,17 @@ db.Like = Like;
 db.Weather = Weather;
 db.Image = Image;
 
-User.initiate(sequelize);
-Post.initiate(sequelize);
-Like.initiate(sequelize);
-Weather.initiate(sequelize);
-Image.initiate(sequelize);
+Object.values(db).forEach(model => {
+  if (model && typeof model.initiate === 'function') {
+    model.initiate(sequelize);
+  }
+});
 
-User.associate(db);
-Post.associate(db);
-Like.associate(db);
-Weather.associate(db);
-Image.associate(db);
+// 4. 모든 모델이 초기화된 후, associate 함수를 호출하여 관계를 설정합니다.
+Object.values(db).forEach(model => {
+  if (model && typeof model.associate === 'function') {
+    model.associate(db);
+  }
+});
 
 module.exports = db;

@@ -1,6 +1,6 @@
-const { success, fail } = require('../utils/response');
+const { ApiResponse } = require('../response');
 
-export const getLooks = (req, res) => {
+exports.getLooks = (req, res) => {
     try {
         const { sort = 'latest', page = 1, limit = 20 } = req.query;
         let sortedLooks;
@@ -10,7 +10,7 @@ export const getLooks = (req, res) => {
         } else if (sort === 'latest') {
             sortedLooks = [...allLooks].sort((a, b) => b.date - a.date);
         } else {
-            return res.status(400).json(apiResponse.fail({ code: "LOOKS400", message: "sort 파라미터는 'popular' 또는 'latest'만 가능합니다." }));
+            return res.status(400).json(ApiResponse.fail({ code: "LOOKS400", message: "sort 파라미터는 'popular' 또는 'latest'만 가능합니다." }));
         }
 
         const totalPosts = sortedLooks.length;
@@ -29,22 +29,19 @@ export const getLooks = (req, res) => {
         };
         
         const message = sort === 'popular' ? "인기 룩 목록 조회 성공" : "최신 룩 목록 조회 성공";
-        // 성공 응답
-        return res.status(200).json(apiResponse.success({ message, result }));
+        return res.status(200).json(ApiResponse.success({ code: "LOOKS200", message, result }));
 
     } catch (error) {
-        // 서버 내부 오류에 대한 실패 응답
-        return res.status(500).json(apiResponse.fail({ code: "LOOKS500", message: error.message }));
+        return res.status(500).json(ApiResponse.fail({ code: "LOOKS500", message: error.message }));
     }
 };
 
-export const likePost = (req, res) => {
+exports.likePost = (req, res) => {
     try {
         const { looktodayId } = req.params;
         const foundLook = allLooks.find(look => look.looktoday_id === parseInt(looktodayId));
 
         if (!foundLook) {
-            // 게시물을 찾지 못한 경우 실패 응답
             return res.status(404).json(ApiResponse.fail({ code: "LOOKS404", message: "해당 게시물을 찾을 수 없습니다." }));
         }
 
@@ -57,7 +54,6 @@ export const likePost = (req, res) => {
             isLiked: foundLook.isLiked
         };
         
-        // 성공 응답
         return res.status(200).json(ApiResponse.success({ code: "LIKE201", message: "좋아요 처리가 완료되었습니다.", result }));
 
     } catch (error) {
@@ -65,7 +61,7 @@ export const likePost = (req, res) => {
     }
 };
 
-export const unlikePost = (req, res) => {
+exports.unlikePost = (req, res) => {
     try {
         const { looktodayId } = req.params;
         const foundLook = allLooks.find(look => look.looktoday_id === parseInt(looktodayId));

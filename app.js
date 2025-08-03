@@ -8,7 +8,7 @@ const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 
 const authRoutes = require('./routes/auth'); //라우트 연결
-const looksRoutes = require('./routes/looks');
+const looksRoutes = require('./routes/looks.js');
 const db = require('./models'); //db
 
 const PORT = process.env.PORT || 3000;

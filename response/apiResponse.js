@@ -1,7 +1,7 @@
-import { CustomSuccess } from "./CustomSuccess.js";
-import { CustomError } from "./CustomError.js";
+const { CustomSuccess } = require("./customSuccess.js");
+const { CustomError } = require("./customError.js");
 
-export class ApiResponse {
+class ApiResponse {
   static success({
     code = "COMMON200",
     message = "요청에 성공했습니다.",
@@ -18,3 +18,5 @@ export class ApiResponse {
     return new CustomError(code, message, error);
   }
 }
+
+module.exports = { ApiResponse };

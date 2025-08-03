@@ -55,7 +55,11 @@ class Post extends Sequelize.Model {
     }
     static associate(db) {
     db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'user_id' });
-    }
+
+    db.Post.hasMany(db.Like, { foreignKey: 'looktoday_id', sourceKey: 'looktodayId' });
+    db.Post.hasMany(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktodayId' });
+    db.Post.hasOne(db.Weather, { foreignKey: 'looktoday_id', sourceKey: 'looktodayId' });
+    }  
 }
 
 module.exports = Post;
