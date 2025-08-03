@@ -11,9 +11,6 @@ router.get('/check-username', authController.checkNickname);
 // 회원가입 (POST /api/auth/signup)
 router.post('/signup', authController.signup);
 
-//이메일 인증 (POST /api/auth/veryfi-email)
-router.post('/verify-email', authController.verifyEmail);
-
 //로그인 (POST /api/auth/login)
 router.post('/login', authController.login);
 

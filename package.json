@@ -23,6 +23,7 @@
   "keywords": [],
   "description": "",
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "sequelize-cli": "^6.6.3"
   }
 }

@@ -29,17 +29,6 @@ class User extends Sequelize.Model {
                 type: DataTypes.DATE,
                 allowNull:false
             },
-            //위치 (위도)
-            latitude: {
-                type: DataTypes.FLOAT,
-                allowNull: false
-            },
-
-            //위치 (경도)
-            longitude: {
-                type: DataTypes.FLOAT,
-                allowNull: false
-            },
             //시/도
             city: {
                 type: Sequelize.STRING(20),
@@ -49,24 +38,7 @@ class User extends Sequelize.Model {
             district: {
                 type: Sequelize.STRING(20),
                 allowNull: false
-            },
-
-            //이메일 인증 코드
-            verificationCode: {
-                type: DataTypes.STRING,
-                allowNull: false
-            },
-            //이메일 인증 여부
-            isVerified: {
-                type: DataTypes.BOOLEAN,
-                defaultValue: false,
-                allowNull: false
-            },
-            //인증 코드 만료 시간
-            verificationExpiresAt: { 
-            type: DataTypes.DATE,
-            allowNull: true 
-            },                                     
+            },                              
         }, {
             sequelize,
             timestamps: true,

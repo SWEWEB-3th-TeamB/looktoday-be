@@ -31,8 +31,7 @@ app.use('/api/auth', authRoutes)
 
 db.sequelize.sync()
   .then(() => {
-    console.log('DB 연결 및 테이블 생성 완료');
-    // 서버 시작 코드 위치
+    console.log('DB 연결 성공');
     app.listen(PORT, () => {
       console.log(`${PORT}번 포트에서 대기 중`);
     });
