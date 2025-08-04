@@ -147,3 +147,14 @@ exports.login = async (req, res) => {
         return res.status(500).json({ message: '로그인 중 서버 오류가 발생했습니다.' });
     }
 };
+
+// --- 로그아웃 컨트롤러 함수 (POST /api/auth/logout) ---
+exports.logout = async (req, res) => {
+    try {
+        // 클라이언트에서 토큰 삭제만으로 로그아웃 처리 (서버는 상태 유지하지 않음)
+        return res.status(200).json({ message: '로그아웃 되었습니다.' });
+    } catch (error) {
+        console.error('로그아웃 중 서버 오류 발생:', error);
+        return res.status(500).json({ message: '로그아웃 중 서버 오류가 발생했습니다.' });
+    }
+};
