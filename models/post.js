@@ -42,6 +42,11 @@ class Post extends Sequelize.Model {
                 type: Sequelize.STRING(40),
                 allowNull:true,
             },
+            likeCount: {
+                type: Sequelize.INTEGER,
+                allowNull:false,
+                defaultValue: 0,
+            },
             }, {
                 sequelize,
                 timestamps: false,
