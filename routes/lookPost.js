@@ -1,5 +1,6 @@
 const express = require('express');
 const { isLoggedIn } = require('../middlewares');
+const { where } = require('sequelize');
 
 module.exports = (db) => {
   const router = express.Router();
@@ -8,49 +9,54 @@ module.exports = (db) => {
   router.use(express.json());
 
   // 게시물 업로드 POST /api/lookPost
-  //router.post('/api/lookPost', isLoggedIn, express.json(), async (req, res) => { // 테스트용
-  router.post('/lookPost', async (req, res) => {
+  router.post('/lookPost', isLoggedIn, express.json(), async (req, res) => {
     try {
       const {
-        imageUrl,
+        imageId,
         comment,
         apparent_temp,
         apparent_humidity,
         isPublic,
-        si,
+        sido,
         gungu,
         date,
+        time, 
         weather
       } = req.body;
 
       // 필수값 확인
       if (
-        !imageUrl || !comment || !apparent_temp || !apparent_humidity ||
-        typeof isPublic !== 'boolean' || !si || !gungu ||
-        !date || !weather
+        !imageId || !comment || !apparent_temp || !apparent_humidity ||
+        typeof isPublic !== 'boolean' || !sido || !gungu ||
+        !date || !time || !weather
       ) {
         return res.status(400).json({
           success: false,
           message: "필수 항목이 누락되었습니다. 모든 입력값을 확인해주세요."
         });
       }
+      
+      const user_id = req.user.id; // 로그인 사용자 ID
+      const previousCount = await Post.count({where: { user_id }}); // 지금까지 쓴 게시글 수 확인
 
       const newPost = await Post.create({
-        user_id: req.user?.id || 1, // 실제론 로그인 사용자 ID
-        si,
+        user_id, 
+        post_count: previousCount + 1, 
+        sido,
         gungu,
         apparent_temp,
         apparent_humidity,
         weather,
         isPublic,
         comment,
-        date
+        date,
+        time
       });
 
-      await Image.create({
-        imageUrl,
-        looktoday_id: newPost.looktoday_id,
-      });
+      // 이미지랑 포스트 연결 
+      await Image.update(
+        {looktoday_id: newPost.looktoday_id},
+        { where: { image_id: imageId } });
 
       return res.status(201).json({
         success: true,
@@ -69,24 +75,26 @@ module.exports = (db) => {
 
   // PUT /api/lookPost/:id 게시물 수정
   router.put('/lookPost/:id', isLoggedIn, async (req, res) => {
-    const { id } = req.params;
-    const {
-      imageUrl,
-      comment,
-      apparent_temp,
-      apparent_humidity,
-      isPublic,
-      si,
-      gungu,
-      date,
-      weather
+    try {
+      const { id } = req.params;
+      const {
+        imageId,
+        comment,
+        apparent_temp,
+        apparent_humidity,
+        isPublic,
+        sido,
+        gungu,
+        date,
+        time,
+        weather
     } = req.body;
 
     // 필수값 확인
     if (
-      !imageUrl || !comment || !apparent_temp || !apparent_humidity ||
-      typeof isPublic !== 'boolean' || !si || !gungu ||
-      !date || !weather
+      !imageId || !comment || !apparent_temp || !apparent_humidity ||
+      typeof isPublic !== 'boolean' || !sido || !gungu ||
+      !date || !time || !weather
     ) {
       return res.status(400).json({
         success: false,
@@ -94,28 +102,31 @@ module.exports = (db) => {
       });
     }
 
-    try {
-      const post = await Post.findOne({ where: { looktoday_id: id } });
-      if (!post) { // 게시물 존재 확인
-        return res.status(404).json({ success: false, message: "게시물을 찾을 수 없습니다." });
-      }
 
-      if (post.user_id !== req.user.id) { // 권한 확인
-        return res.status(403).json({ success: false, message: "수정 권한이 없습니다." });
-      }
+    const post = await Post.findOne({ where: { looktoday_id: id } });
+    if (!post) { // 게시물 존재 확인
+      return res.status(404).json({ success: false, message: "게시물을 찾을 수 없습니다." });
+    }
 
-      await post.update({ // 업데이트
-        si,
-        gungu,
-        apparent_temp,
-        apparent_humidity,
-        weather,
-        isPublic,
-        comment,
-        date
-      });
+    if (post.user_id !== req.user.id) { // 권한 확인
+      return res.status(403).json({ success: false, message: "수정 권한이 없습니다." });
+    }
 
-      await Image.update({ imageUrl }, { where: { looktoday_id: id } });
+    await post.update({ // 업데이트
+      sido,
+      gungu,
+      apparent_temp,
+      apparent_humidity,
+      weather,
+      isPublic,
+      comment,
+      date,
+      time
+    });
+
+    await Image.update(
+      { looktoday_id: id }, 
+      { where: { image_id: imageId } });
 
       return res.status(200).json({
         success: true,
@@ -133,10 +144,11 @@ module.exports = (db) => {
 
   // DELETE /api/lookPost/:id 게시물 삭제
   router.delete('/lookPost/:id', isLoggedIn, async (req, res) => {
-    const { id } = req.params;
 
     try {
+      const { id } = req.params;
       const post = await Post.findOne({ where: { looktoday_id: id } });
+
       if (!post) { // 게시물 존재 확인
         return res.status(404).json({ success: false, message: "게시물이 존재하지 않습니다." });
       }
@@ -163,6 +175,5 @@ module.exports = (db) => {
     }
   });
 
+  return router;
 };
-
-module.exports = router;

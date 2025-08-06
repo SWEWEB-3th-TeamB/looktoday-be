@@ -15,8 +15,8 @@ db.User.initiate(sequelize);
 db.Post = require('./post');
 db.Post.initiate(sequelize);
 
-if (db.Post.associate) db.Post.associate(db);
-if (db.Image.associate) db.Image.associate(db);
-if (db.User.associate) db.User.associate(db);
+// db.Post.associate(db);
+// db.Image.associate(db); 
+// db.User.associate(db);
 
 module.exports = db;

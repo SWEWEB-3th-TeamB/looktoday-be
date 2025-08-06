@@ -6,9 +6,7 @@ const fs = require('fs');
 
 module.exports = (db) => {
   const router = express.Router();
-
-  // Image 모델이 필요한 경우 가져올 수 있음
-  //const { Image } = db;
+  const { Image } = db;
   
   // uploads 폴더 없으면 생성
   try {
@@ -34,7 +32,7 @@ module.exports = (db) => {
   });
   
   // POST /api/image
-  router.post('/image', upload.single('image'), (req, res) => {
+  router.post('/image', upload.single('image'), async(req, res) => { // 이미지 여러 개 업로드해야하면 upload.array('images') 사용
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -42,16 +40,31 @@ module.exports = (db) => {
       });
     }
 
-    res.json({
+    // DB에 이미지 정보 저장
+    try {
+      const savedImage = await Image.create({
+        imageUrl: req.file.filename
+      });
+
+    return res.json({
       success: true,
       imageUrl: req.file.filename,
+      imageId: savedImage.image_id,
+      message: '이미지 업로드 성공'
     });
-  });
- 
-  // 파일 크기 초과 에러 처리
-  router.use((err, req, res, next) => {
-    if (err instanceof multer.MulterError) {
-      return res.status(400).json({
+  } catch (err) {
+    console.error('DB 저장 실패:', err);
+    res.status(500).json({
+      success: false,
+      message: 'DB 저장 중 오류가 발생했습니다.',
+    });
+  }
+});
+
+// 파일 크기 초과 에러 처리
+router.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({
         success: false,
         message: `이미지 업로드에 실패했습니다. 파일 크기를 확인해주세요. (최대 5MB)`,
       });
@@ -59,6 +72,5 @@ module.exports = (db) => {
     next(err);
   });
 
+  return router;
 };
-
-module.exports = router;
