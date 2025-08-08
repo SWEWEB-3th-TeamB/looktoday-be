@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authControllers');
+const verifyToken = require('../middlewares/authMiddleware');
 
 // 이메일 중복 확인 (GET /api/auth/check-email)
 router.get('/check-email', authController.checkEmail);
