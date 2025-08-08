@@ -1,7 +1,9 @@
 const bcrypt = require('bcrypt'); 
 const crypto = require('crypto'); 
 const dotenv = require('dotenv'); 
-const db = require('../models');  
+const db = require('../models');
+const jwt = require('jsonwebtoken');
+
 const User = db.User;             
 const { sendVerificationEmail } = require('../utils/email'); // 이메일 발송 유틸리티 임포트
 
@@ -130,22 +132,28 @@ exports.login = async (req, res) => {
             return res.status(401).json({ message: '비밀번호가 일치하지 않습니다.' });
         }
 
-        // 로그인 성공 응답
-        return res.status(200).json({
-            message: '로그인에 성공했습니다.',
-            user: {
-                id: user.id,
-                email: user.email,
-                nickname: user.nickname,
-                location: user.location,
-                dateOfBirth: user.dateOfBirth,
-            }
-        });
+        // JWT 발급
+         const token = jwt.sign(
+             { id: user.id, email: user.email },  // 토큰 payload
+             process.env.JWT_SECRET,              // 비밀키
+              { expiresIn: '1h' }                   // 만료 시간
+         );
 
-    } catch (error) {
-        console.error('로그인 중 서버 오류 발생:', error);
-        return res.status(500).json({ message: '로그인 중 서버 오류가 발생했습니다.' });
-    }
+        return res.json({
+             message: '로그인에 성공했습니다.',
+             token, // 토큰 추가
+             user: {
+              id: user.id,
+              email: user.email,
+              nickname: user.nickname,
+              dateOfBirth: user.dateOfBirth,
+      },
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: '서버 오류입니다.' });
+  }
 };
 
 // --- 로그아웃 컨트롤러 함수 (POST /api/auth/logout) ---
