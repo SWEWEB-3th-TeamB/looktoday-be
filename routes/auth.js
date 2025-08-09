@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authControllers');
+const verifyToken = require('../middlewares/authMiddleware');
 
 // 이메일 중복 확인 (GET /api/auth/check-email)
 router.get('/check-email', authController.checkEmail);
@@ -13,5 +14,8 @@ router.post('/signup', authController.signup);
 
 //로그인 (POST /api/auth/login)
 router.post('/login', authController.login);
+
+//로그아웃 (Post /api/auth/logout)
+router.post('/logout', authController.logout);
 
 module.exports = router;
