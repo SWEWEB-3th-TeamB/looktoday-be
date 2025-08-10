@@ -31,7 +31,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes)
 app.use('/api/looks', looksRoutes);
 
-db.sequelize.sync({ force: true })
+db.sequelize.sync()
   .then(() => {
     console.log('DB 연결 및 테이블 생성 완료');
     // 서버 시작 코드 위치
