@@ -4,11 +4,6 @@ const { DataTypes } = require('sequelize');
 class User extends Sequelize.Model {
     static initiate(sequelize) {
         User.init({
-            user_id: {
-                type: Sequelize.BIGINT,
-                autoIncrement: true,
-                primaryKey: true,
-            },
             //이메일
             email: {
                 type: Sequelize.STRING(40),
@@ -34,34 +29,16 @@ class User extends Sequelize.Model {
                 type: DataTypes.DATE,
                 allowNull:false
             },
-            //위치 (위도)
-            latitude: {
-                type: DataTypes.FLOAT,
+            //시/도
+            city: {
+                type: Sequelize.STRING(20),
                 allowNull: false
             },
-
-            //위치 (경도)
-            longitude: {
-                type: DataTypes.FLOAT,
+            //군/구
+            district: {
+                type: Sequelize.STRING(20),
                 allowNull: false
-            },
-
-            //이메일 인증 코드
-            verificationCode: {
-                type: DataTypes.STRING,
-                allowNull: false
-            },
-            //이메일 인증 여부
-            isVerified: {
-                type: DataTypes.BOOLEAN,
-                defaultValue: false,
-                allowNull: false
-            },
-            //인증 코드 만료 시간
-            verificationExpiresAt: { 
-            type: DataTypes.DATE,
-            allowNull: true 
-            },                                     
+            },                              
         }, {
             sequelize,
             timestamps: true,
@@ -72,10 +49,6 @@ class User extends Sequelize.Model {
             charset: 'utf8',
             collate: 'utf8_general_ci',
         });
-    }
-    static associate(db) {
-        db.User.hasMany(db.Post, { foreignKey: 'user_id', sourceKey: 'user_id' });
-        db.User.hasMany(db.Like, { foreignKey: 'user_id', sourceKey: 'user_id' });
     }
 }
 
