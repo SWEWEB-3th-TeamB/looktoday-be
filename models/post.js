@@ -25,18 +25,20 @@ class Post extends Sequelize.Model {
                 type: Sequelize.INTEGER,
                 allowNull: false,
             },
-            // // 날짜만
-            // date: {
-            //     type: Sequelize.DATEONLY,
-            //     allowNull: false, 
-            //     defaultValue: Sequelize.literal('CURRENT_DATE') // 현재 날짜 자동 저장
-            // },
-            // //시간만
-            // time: {
-            //     type: Sequelize.TIME,
-            //     allowNull: false,
-            //     defaultValue: Sequelize.literal('CURRENT_TIME') // 현재 시간 자동 저장
-            // },
+
+            // 날짜만
+            date: {
+                type: Sequelize.DATEONLY,
+                allowNull: false, 
+                defaultValue: Sequelize.literal('CURRENT_DATE') // 현재 날짜 자동 저장
+            },
+            //시간만
+            time: {
+                type: Sequelize.TIME,
+                allowNull: false,
+                defaultValue: Sequelize.literal('CURRENT_TIME') // 현재 시간 자동 저장
+            },
+
             // Field
             sido: {
                 type: Sequelize.STRING(20),
