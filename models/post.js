@@ -25,6 +25,7 @@ class Post extends Sequelize.Model {
                 type: Sequelize.INTEGER,
                 allowNull: false,
             },
+
             // 날짜만
             date: {
                 type: Sequelize.DATEONLY,
@@ -37,6 +38,7 @@ class Post extends Sequelize.Model {
                 allowNull: false,
                 defaultValue: Sequelize.literal('CURRENT_TIME') // 현재 시간 자동 저장
             },
+
             // Field
             sido: {
                 type: Sequelize.STRING(20),
