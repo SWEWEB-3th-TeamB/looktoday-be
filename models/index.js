@@ -6,7 +6,17 @@ const db = {};
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
+db.Image = require('./image');
+db.Image.initiate(sequelize);
+
 db.User = require('./user');
 db.User.initiate(sequelize);
+
+db.Post = require('./post');
+db.Post.initiate(sequelize);
+
+// db.Post.associate(db);
+// db.Image.associate(db); 
+// db.User.associate(db);
 
 module.exports = db;
