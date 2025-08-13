@@ -43,7 +43,7 @@ module.exports = (db) => {
 
     try {
       const {
-        weather,
+        //weather,
         date,
         hour,
         isPublic,
@@ -66,7 +66,7 @@ module.exports = (db) => {
       if (
         !req.file || !comment || !apparent_temp || !apparent_humidity ||
         (isPublic !== 'true' && isPublic !== 'false') || !sido || !gungu ||
-        !date || !hour || !weather
+        !date || !hour // || !weather
       ) {
         return res.status(400).json({
           success: false,
@@ -89,7 +89,7 @@ module.exports = (db) => {
         gungu,
         apparent_temp,
         apparent_humidity,
-        weather,
+        //weather,
         isPublic: isPublic === 'true', // 문자열 → boolean 변환
         comment,
         date,
@@ -128,7 +128,7 @@ module.exports = (db) => {
         gungu,
         date,
         hour,
-        weather
+        //weather
     } = req.body;
 
     // 코멘트 길이 검사
@@ -169,7 +169,7 @@ module.exports = (db) => {
       gungu,
       apparent_temp,
       apparent_humidity,
-      weather,
+      //weather,
       isPublic: isPublic === 'true',
       comment,
       date,

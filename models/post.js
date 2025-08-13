@@ -58,10 +58,10 @@ class Post extends Sequelize.Model {
                 allowNull: false
             },
             // 날씨 아이콘
-            weather: {
+            /* weather: {
                 type: Sequelize.ENUM('sunny', 'cloudy', 'rainy', 'snowy'),
                 allowNull: false
-            },
+            }, */
             // 공개여부
             isPublic: {
                 type: Sequelize.BOOLEAN,
