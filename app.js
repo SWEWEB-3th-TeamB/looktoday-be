@@ -1,23 +1,30 @@
+const dotenv = require('dotenv');
+dotenv.config();
+
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
+const app = express();
 
-const authRoutes = require('./routes/auth'); //라우트 연결
+
+
+const looksRoutes = require('./routes/looks.js');
+
+
 const db = require('./models'); //db
-
+const lookPostRouter = require('./routes/lookPost')(db); // lookPost.js 라우터 가져오기
+const imageRouter = require('./routes/image')(db); // image.js 라우터 가져오기
 const PORT = process.env.PORT || 3000;
 
+
+const authRoutes = require('./routes/auth'); //라우트 연결
 dotenv.config();
 
-const app = express();
-app.set('port',process.env.PORT || 3000);
-
+app.use(express.json());
 app.use(morgan('dev'));
 app.use('/',express.static(path.join(__dirname, 'public')));
-app.use(express.json());
 app.use(express.urlencoded({ extended: false}));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
@@ -26,7 +33,6 @@ app.get('/', (req, res) => {
     res.send('Hello World');
 });
 
-<<<<<<< HEAD
 app.listen(app.get('port'),()=>{
     console.log(app.get('port'),'번 포트에서 대기 중');
 });
@@ -37,9 +43,13 @@ const weatherRouter = require('./routes/weather');
 // app.use(...) 부분에 아래 코드를 추가하여 라우터를 연결합니다.
 // 이제 /api/weather 경로로 들어오는 모든 요청은 weatherRouter가 처리합니다.
 app.use('/api/weather', weatherRouter);
-=======
 //라우트 연결 (/api/auth로 들어오는 요청 처리)
+
 app.use('/api/auth', authRoutes)
+app.use('/api/looks', looksRoutes);
+app.use('/api', lookPostRouter); // 게시글 업로드 라우터 연결
+app.use('/api', imageRouter); // 이미지 업로드 라우터 연결
+
 
 db.sequelize.sync()
   .then(() => {
@@ -52,4 +62,9 @@ db.sequelize.sync()
   .catch((err) => {
     console.error('DB 연결 실패:', err);
   });
->>>>>>> 290885e0271b9d1c25e84ca9975491a0077ba429
+
+
+
+app.get('/', (req, res) => {
+    res.send('Hello World');
+});
