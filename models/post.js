@@ -1,5 +1,4 @@
 const Sequelize = require('sequelize');
-const { all } = require('../routes/lookPost');
 
 class Post extends Sequelize.Model {
     static initiate(sequelize) {
@@ -11,11 +10,11 @@ class Post extends Sequelize.Model {
                 primaryKey: true,
                 autoIncrement: true
             },
-            //사용자 식별번호
-            user_id: {
+            //사용자 식별번호 (외래 키)
+            id: {
                 type: Sequelize.INTEGER,
                 allowNull: false,
-                references: {
+                references: { // 참조
                     model: 'users',
                     key: 'id'
                 }
@@ -32,19 +31,18 @@ class Post extends Sequelize.Model {
                 allowNull: false, 
                 defaultValue: Sequelize.literal('CURRENT_DATE') // 현재 날짜 자동 저장
             },
-            //시간만
-            time: {
-                type: Sequelize.TIME,
-                allowNull: false,
-                defaultValue: Sequelize.literal('CURRENT_TIME') // 현재 시간 자동 저장
+            // api 통해서 받아올 수 있는 날씨 예보 시간
+            hour: {
+                type: Sequelize.ENUM('2', '5', '8', '11', '14', '17', '20', '23'),
+                allowNull: false
             },
 
-            // Field
+            // 지역(시/도)
             sido: {
                 type: Sequelize.STRING(20),
                 allowNull: true
             },
-            // Field2
+            // 지역(군/구)
             gungu: {
                 type: Sequelize.STRING(20),
                 allowNull: true,
@@ -82,15 +80,17 @@ class Post extends Sequelize.Model {
             modelName: 'Post',
             tableName: 'Posts', //DB 테이블 이름
             paranoid: true,
-            charset: 'utf8',
-            collate: 'utf8_general_ci',
+            charset: 'utf8mb4',
+            collate: 'utf8mb4_general_ci',
         });
     }
 
-    /* static associate(db) {
-        db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'id' });
-        db.Post.hasMany(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
-    } */
+    static associate(db) {
+        // Post 모델은 User 모델에 속해있음
+        db.Post.belongsTo(db.User, { foreignKey: 'id', targetKey: 'id' });
+        // Post 모델과 Image 모델은 1:1 관계
+        db.Post.hasOne(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
+    }
 }
 
 module.exports = Post;
