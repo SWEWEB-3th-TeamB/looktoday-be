@@ -11,15 +11,6 @@ class Post extends Sequelize.Model {
                 primaryKey: true,
                 autoIncrement: true
             },
-            // //유저 아이디
-            // user_id: { 
-            //     type: Sequelize.INTEGER,
-            //     allowNull: false,
-            //     references: {
-            //         model: 'users', 
-            //         key: 'user_id',   
-            //     }
-            // },
             //사용자가 작성한 룩투데이 게시글 수
             post_count: {
                 type: Sequelize.INTEGER,
