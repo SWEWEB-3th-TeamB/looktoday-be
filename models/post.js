@@ -11,32 +11,25 @@ class Post extends Sequelize.Model {
                 primaryKey: true,
                 autoIncrement: true
             },
-            //사용자 식별번호
-            user_id: {
-                type: Sequelize.INTEGER,
-                allowNull: false,
-                references: {
-                    model: 'users',
-                    key: 'id'
-                }
-            },
+            // //유저 아이디
+            // user_id: { 
+            //     type: Sequelize.INTEGER,
+            //     allowNull: false,
+            //     references: {
+            //         model: 'users', 
+            //         key: 'user_id',   
+            //     }
+            // },
             //사용자가 작성한 룩투데이 게시글 수
             post_count: {
                 type: Sequelize.INTEGER,
                 allowNull: false,
             },
-            // // 날짜만
-            // date: {
-            //     type: Sequelize.DATEONLY,
-            //     allowNull: false, 
-            //     defaultValue: Sequelize.literal('CURRENT_DATE') // 현재 날짜 자동 저장
-            // },
-            // //시간만
-            // time: {
-            //     type: Sequelize.TIME,
-            //     allowNull: false,
-            //     defaultValue: Sequelize.literal('CURRENT_TIME') // 현재 시간 자동 저장
-            // },
+            //좋아요 수
+            like_count: {
+                type: Sequelize.INTEGER,
+                allowNull: false,
+            },
             // Field
             sido: {
                 type: Sequelize.STRING(20),
@@ -76,19 +69,19 @@ class Post extends Sequelize.Model {
         }, {
             sequelize,
             timestamps: true,
-            underscored: false,
+            underscored: true,
             modelName: 'Post',
-            tableName: 'Posts', //DB 테이블 이름
+            tableName: 'posts', //DB 테이블 이름
             paranoid: true,
             charset: 'utf8',
             collate: 'utf8_general_ci',
         });
     }
 
-    /* static associate(db) {
-        db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'id' });
-        db.Post.hasMany(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
-    } */
+    static associate(db) {
+        db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'user_id' });
+        db.Post.hasOne(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
+    }
 }
 
 module.exports = Post;
