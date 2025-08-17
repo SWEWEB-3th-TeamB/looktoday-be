@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authControllers');
 const verifyToken = require('../middlewares/authMiddleware');
+const authMiddleware = require('../middlewares/authMiddleware');
+
 
 // 이메일 중복 확인 (GET /api/auth/check-email)
 router.get('/check-email', authController.checkEmail);
@@ -17,5 +19,27 @@ router.post('/login', authController.login);
 
 //로그아웃 (Post /api/auth/logout)
 router.post('/logout', authController.logout);
+
+
+// 로그인 상태에서 사용자 정보 가져오기
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    // authMiddleware에서 req.user에 토큰 정보(id, email) 넣어줌
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'email', 'nickname', 'dateOfBirth']
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+    }
+
+    res.json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: '서버 오류입니다.' });
+  }
+});
+
+
 
 module.exports = router;
