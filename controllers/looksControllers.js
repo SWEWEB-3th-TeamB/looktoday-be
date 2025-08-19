@@ -95,8 +95,7 @@ exports.getLookDetail = async (req, res) => {
 exports.likePost = async (req, res) => {
     try {
         const { looktoday_id } = req.params; 
-        const { user_id } = req.body; 
-
+        const user_id = req.user.user_id; 
         const existingLike = await Like.findOne({
             where: { user_id: user_id, looktoday_id: looktoday_id }
         });
@@ -126,7 +125,7 @@ exports.likePost = async (req, res) => {
 exports.unlikePost = async (req, res) => {
     try {
         const { looktoday_id } = req.params; 
-        const { user_id } = req.body; 
+        const user_id = req.user.user_id;  
 
         const existingLike = await Like.findOne({
             where: { user_id: user_id, looktoday_id: looktoday_id }
