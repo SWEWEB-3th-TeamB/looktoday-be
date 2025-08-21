@@ -11,12 +11,12 @@ class Post extends Sequelize.Model {
                 autoIncrement: true
             },
             //사용자 식별번호 (외래 키)
-            id: {
+            user_id: {
                 type: Sequelize.INTEGER,
                 allowNull: false,
                 references: { // 참조
                     model: 'users',
-                    key: 'id'
+                    key: 'user_id'
                 }
             },
             //사용자가 작성한 룩투데이 게시글 수
@@ -35,6 +35,11 @@ class Post extends Sequelize.Model {
             hour: {
                 type: Sequelize.ENUM('2', '5', '8', '11', '14', '17', '20', '23'),
                 allowNull: false
+            },
+            //좋아요 수
+            like_count: {
+                type: Sequelize.INTEGER,
+                allowNull: false,
             },
 
             // 지역(시/도)
@@ -76,9 +81,9 @@ class Post extends Sequelize.Model {
         }, {
             sequelize,
             timestamps: true,
-            underscored: false,
+            underscored: true,
             modelName: 'Post',
-            tableName: 'Posts', //DB 테이블 이름
+            tableName: 'posts', //DB 테이블 이름
             paranoid: true,
             charset: 'utf8mb4',
             collate: 'utf8mb4_general_ci',
@@ -87,8 +92,7 @@ class Post extends Sequelize.Model {
 
     static associate(db) {
         // Post 모델은 User 모델에 속해있음
-        db.Post.belongsTo(db.User, { foreignKey: 'id', targetKey: 'id' });
-        // Post 모델과 Image 모델은 1:1 관계
+        db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'user_id' });
         db.Post.hasOne(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
     }
 }

@@ -32,7 +32,7 @@ class Image extends Sequelize.Model {
             timestamps: true,
             underscored: false,
             modelName: 'Image',
-            tableName: 'Images', //DB 테이블 이름
+            tableName: 'images', //DB 테이블 이름
             paranoid: true,
             charset: 'utf8',
             collate: 'utf8_general_ci',

@@ -79,11 +79,11 @@ module.exports = (db) => {
         imageUrl: req.file.filename
       });
 
-      const userId = req.user.id; // 로그인 사용자 ID
-      const previousCount = await Post.count({ where: { id: userId } }); // 지금까지 쓴 게시글 수 확인
+      const user_id = req.user.user_id; // 로그인 사용자 ID
+      const previousCount = await Post.count({ where: { user_id } }); // 지금까지 쓴 게시글 수 확인
 
       const newPost = await Post.create({
-        id: userId,
+        user_id,
         post_count: previousCount + 1,
         sido,
         gungu,
@@ -101,7 +101,7 @@ module.exports = (db) => {
 
       return res.status(201).json({
         success: true,
-        postId: newPost.looktoday_id,
+        looktoday_id: newPost.looktoday_id,
         imageId: savedImage.image_id,
         message: '포스트가 성공적으로 업로드되었습니다.'
       });
@@ -115,10 +115,10 @@ module.exports = (db) => {
     }
   });
 
-  // PUT /api/lookPost/:id 이미지+게시물 수정
-  router.put('/lookPost/:postId', isLoggedIn, upload.single('image'), async (req, res) => {
+  // PUT /api/lookPost/:looktoday_id 이미지+게시물 수정
+  router.put('/lookPost/:looktoday_id', isLoggedIn, upload.single('image'), async (req, res) => {
     try {
-      const { postId } = req.params;
+      const { looktoday_id } = req.params;
       const {
         comment,
         apparent_temp,
@@ -140,27 +140,27 @@ module.exports = (db) => {
       }
 
     // 게시물 존재 확인
-    const post = await Post.findOne({ where: { looktoday_id: postId } });
+    const post = await Post.findOne({ where: { looktoday_id } });
     if (!post) {
       return res.status(404).json({ success: false, message: "게시물을 찾을 수 없습니다." });
     }
 
     // 권한 확인 
-    if (post.id !== req.user.id) {
+    if (post.user_id !== req.user.user_id) {
       return res.status(403).json({ success: false, message: "수정 권한이 없습니다." });
     }
 
     // 이미지 수정 
     if (req.file) {
       // 기존 이미지 찾아서 교체
-      const image = await Image.findOne({ where: { looktoday_id: postId } });
+      const image = await Image.findOne({ where: { looktoday_id } });
       if (image) {
         await image.update({ imageUrl: req.file.filename });
       } else {
         // 기존 이미지 없으면 새로 생성
         await Image.create({
           imageUrl: req.file.filename,
-          looktoday_id: postId
+          looktoday_id
         });
       }
     }
@@ -190,16 +190,16 @@ module.exports = (db) => {
     }
   });
 
-  // DELETE /api/lookPost/:postId 이미지+게시물 삭제
-  router.delete('/lookPost/:postId', isLoggedIn, async (req, res) => {
-    // 데이터 일관성을 위한 트랜잭션 시작 
+  // DELETE /api/lookPost/:looktoday_id 이미지+게시물 삭제
+  router.delete('/lookPost/:looktoday_id', isLoggedIn, async (req, res) => {
+    // 데이터 일관성을 위한 트랜잭션 시작
     const t = await sequelize.transaction();
     try {
-      const { postId } = req.params;
+      const { looktoday_id } = req.params;
 
       //삭제할 게시물을 트랜잭션 안에서 조회
       const post = await Post.findOne({ 
-        where: { looktoday_id: postId },
+        where: { looktoday_id },
         transaction: t
       });
 
@@ -210,24 +210,23 @@ module.exports = (db) => {
       }
 
       // 권한 확인
-      if (post.id !== req.user.id) {
+      if (post.user_id !== req.user.user_id) {
         await t.rollback(); // 트랜잭션 롤백
         return res.status(403).json({ success: false, message: "삭제 권한이 없습니다." });
       }
 
-      const userId = post.id; // 삭제하는 사용자의 ID 
       const deletedPostCount = post.post_count;
 
       // 이미지와 게시물 삭제
-      await Image.destroy({ where: { looktoday_id: postId }, transaction: t });
-      await Post.destroy({ where: { looktoday_id: postId }, transaction: t });
+      await Image.destroy({ where: { looktoday_id }, transaction: t });
+      await Post.destroy({ where: { looktoday_id }, transaction: t });
 
       // 사용자 게시물 수 감소
       await Post.update(
         { post_count: sequelize.literal('post_count - 1') },
         {
           where: {
-            id: userId,
+            user_id: post.user_id,
             post_count: { [Op.gt]: deletedPostCount },
           },
           transaction: t
@@ -238,7 +237,7 @@ module.exports = (db) => {
 
       return res.status(200).json({
         success: true,
-        message: `게시물 ${postId}이 성공적으로 삭제되었습니다.`
+        message: `게시물 ${ looktoday_id }이 성공적으로 삭제되었습니다.`
       });
 
     } catch (error) {

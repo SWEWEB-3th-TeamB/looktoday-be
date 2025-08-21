@@ -10,10 +10,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+<<<<<<< HEAD
+    "axios": "^1.11.0",
+=======
     "bcrypt": "^6.0.0",
+>>>>>>> 290885e0271b9d1c25e84ca9975491a0077ba429
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.0",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
