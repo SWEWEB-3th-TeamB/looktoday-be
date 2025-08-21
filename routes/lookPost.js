@@ -1,84 +1,125 @@
 const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const { isLoggedIn } = require('../middlewares');
-const { where } = require('sequelize');
 
 module.exports = (db) => {
   const router = express.Router();
-  const { Post, Image } = db;
+  const { Post, Image, sequelize, Sequelize: { Op } } = db;
 
-  router.use(express.json());
+  // uploads 폴더 없으면 생성
+  try {
+    fs.readdirSync('uploads');
+  } catch (error) {
+    console.log('uploads 폴더가 없어 생성합니다.');
+    fs.mkdirSync('uploads');
+  }
 
-  // 게시물 업로드 POST /api/lookPost
-  router.post('/lookPost', isLoggedIn, express.json(), async (req, res) => {
+  // multer 설정
+  const upload = multer({
+    storage: multer.diskStorage({
+      destination(req, file, cb) {
+        cb(null, 'uploads/');
+      },
+      filename(req, file, cb) {
+        const ext = path.extname(file.originalname); // 확장자 (.jpg, .png 등)
+        const uniqueName = path.basename(file.originalname, ext) + '_' + Date.now() + ext;
+        cb(null, uniqueName);
+      },
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB 제한
+  });
+
+  // POST /api/lookPost — 이미지 + 게시글 동시 업로드
+  router.post('/lookPost', isLoggedIn, upload.single('image'), async (req, res) => {
+    console.log('--- Request Body ---');  // 확인용 로그 
+    console.log(req.body);
+    console.log('--- Request File ---');
+    console.log(req.file);
+
+    console.log('--- Logged In User Info ---');
+    console.log(req.user);
+
     try {
       const {
-        imageId,
-        comment,
-        apparent_temp,
-        apparent_humidity,
-        isPublic,
-        sido,
-        gungu,
+        weather,
         date,
-        time, 
-        weather
+        hour,
+        isPublic,
+        sido, 
+        gungu, 
+        apparent_temp, 
+        apparent_humidity, 
+        comment, 
       } = req.body;
 
-      // 필수값 확인
+      // 코멘트 길이 검사
+      if (comment && comment.length > 40) {
+        return res.status(400).json({
+          success: false, 
+          message: "코멘트는 최대 40자까지 입력할 수 있습니다."
+        })
+      }
+
+      // 필수값 체크 (form-data라 isPublic은 문자열일 수 있음)
       if (
-        !imageId || !comment || !apparent_temp || !apparent_humidity ||
-        typeof isPublic !== 'boolean' || !sido || !gungu ||
-        !date || !time || !weather
+        !req.file || !comment || !apparent_temp || !apparent_humidity ||
+        (isPublic !== 'true' && isPublic !== 'false') || !sido || !gungu ||
+        !date || !hour || !weather
       ) {
         return res.status(400).json({
           success: false,
-          message: "필수 항목이 누락되었습니다. 모든 입력값을 확인해주세요."
+          message: "필수 항목이 누락되었거나 이미지가 없습니다."
         });
       }
-      
-      const user_id = req.user.id; // 로그인 사용자 ID
-      const previousCount = await Post.count({where: { user_id }}); // 지금까지 쓴 게시글 수 확인
+
+      // DB에 이미지 정보 저장
+      const savedImage = await Image.create({
+        imageUrl: req.file.filename
+      });
+
+      const user_id = req.user.user_id; // 로그인 사용자 ID
+      const previousCount = await Post.count({ where: { user_id } }); // 지금까지 쓴 게시글 수 확인
 
       const newPost = await Post.create({
-        user_id, 
-        post_count: previousCount + 1, 
+        user_id,
+        post_count: previousCount + 1,
         sido,
         gungu,
         apparent_temp,
         apparent_humidity,
         weather,
-        isPublic,
+        isPublic: isPublic === 'true', // 문자열 → boolean 변환
         comment,
         date,
-        time
+        hour
       });
 
-      // 이미지랑 포스트 연결 
-      await Image.update(
-        {looktoday_id: newPost.looktoday_id},
-        { where: { image_id: imageId } });
+      // 이미지와 포스트 연결
+      await savedImage.update({ looktoday_id: newPost.looktoday_id });
 
       return res.status(201).json({
         success: true,
-        postId: newPost.looktoday_id,
-        message: "코디가 성공적으로 업로드되었습니다."
+        looktoday_id: newPost.looktoday_id,
+        imageId: savedImage.image_id,
+        message: '포스트가 성공적으로 업로드되었습니다.'
       });
 
     } catch (error) {
       console.error(error);
       return res.status(500).json({
         success: false,
-        message: "서버 오류로 인해 게시물을 업로드할 수 없습니다. 잠시 후 다시 시도해주세요."
+        message: "서버 오류로 인해 업로드에 실패했습니다."
       });
     }
   });
 
-  // PUT /api/lookPost/:id 게시물 수정
-  router.put('/lookPost/:id', isLoggedIn, async (req, res) => {
+  // PUT /api/lookPost/:looktoday_id 이미지+게시물 수정
+  router.put('/lookPost/:looktoday_id', isLoggedIn, upload.single('image'), async (req, res) => {
     try {
-      const { id } = req.params;
+      const { looktoday_id } = req.params;
       const {
-        imageId,
         comment,
         apparent_temp,
         apparent_humidity,
@@ -86,52 +127,59 @@ module.exports = (db) => {
         sido,
         gungu,
         date,
-        time,
+        hour,
         weather
     } = req.body;
 
-    // 필수값 확인
-    if (
-      !imageId || !comment || !apparent_temp || !apparent_humidity ||
-      typeof isPublic !== 'boolean' || !sido || !gungu ||
-      !date || !time || !weather
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "필수 항목이 누락되었습니다. 모든 입력값을 확인해주세요."
-      });
-    }
+    // 코멘트 길이 검사
+      if (comment && comment.length > 40) {
+        return res.status(400).json({
+          success: false, 
+          message: "코멘트는 최대 40자까지 입력할 수 있습니다."
+        })
+      }
 
-
-    const post = await Post.findOne({ where: { looktoday_id: id } });
-    if (!post) { // 게시물 존재 확인
+    // 게시물 존재 확인
+    const post = await Post.findOne({ where: { looktoday_id } });
+    if (!post) {
       return res.status(404).json({ success: false, message: "게시물을 찾을 수 없습니다." });
     }
 
-    if (post.user_id !== req.user.id) { // 권한 확인
+    // 권한 확인 
+    if (post.user_id !== req.user.user_id) {
       return res.status(403).json({ success: false, message: "수정 권한이 없습니다." });
     }
 
+    // 이미지 수정 
+    if (req.file) {
+      // 기존 이미지 찾아서 교체
+      const image = await Image.findOne({ where: { looktoday_id } });
+      if (image) {
+        await image.update({ imageUrl: req.file.filename });
+      } else {
+        // 기존 이미지 없으면 새로 생성
+        await Image.create({
+          imageUrl: req.file.filename,
+          looktoday_id
+        });
+      }
+    }
     await post.update({ // 업데이트
       sido,
       gungu,
       apparent_temp,
       apparent_humidity,
       weather,
-      isPublic,
+      isPublic: isPublic === 'true',
       comment,
       date,
-      time
+      hour
     });
 
-    await Image.update(
-      { looktoday_id: id }, 
-      { where: { image_id: imageId } });
-
-      return res.status(200).json({
-        success: true,
-        message: "게시물이 성공적으로 수정되었습니다."
-      });
+    return res.status(200).json({
+       success: true,
+       message: "게시물이 성공적으로 수정되었습니다.",
+     });
 
     } catch (error) {
       console.error(error);
@@ -142,31 +190,58 @@ module.exports = (db) => {
     }
   });
 
-  // DELETE /api/lookPost/:id 게시물 삭제
-  router.delete('/lookPost/:id', isLoggedIn, async (req, res) => {
-
+  // DELETE /api/lookPost/:looktoday_id 이미지+게시물 삭제
+  router.delete('/lookPost/:looktoday_id', isLoggedIn, async (req, res) => {
+    // 데이터 일관성을 위한 트랜잭션 시작
+    const t = await sequelize.transaction();
     try {
-      const { id } = req.params;
-      const post = await Post.findOne({ where: { looktoday_id: id } });
+      const { looktoday_id } = req.params;
 
-      if (!post) { // 게시물 존재 확인
+      //삭제할 게시물을 트랜잭션 안에서 조회
+      const post = await Post.findOne({ 
+        where: { looktoday_id },
+        transaction: t
+      });
+
+      // 게시물 존재 확인
+      if (!post) {
+        await t.rollback(); // 트랜잭션 롤백
         return res.status(404).json({ success: false, message: "게시물이 존재하지 않습니다." });
       }
 
-      if (post.user_id !== req.user.id) { // 권한 확인
+      // 권한 확인
+      if (post.user_id !== req.user.user_id) {
+        await t.rollback(); // 트랜잭션 롤백
         return res.status(403).json({ success: false, message: "삭제 권한이 없습니다." });
       }
 
+      const deletedPostCount = post.post_count;
+
       // 이미지와 게시물 삭제
-      await Image.destroy({ where: { looktoday_id: id } });
-      await Post.destroy({ where: { looktoday_id: id } });
+      await Image.destroy({ where: { looktoday_id }, transaction: t });
+      await Post.destroy({ where: { looktoday_id }, transaction: t });
+
+      // 사용자 게시물 수 감소
+      await Post.update(
+        { post_count: sequelize.literal('post_count - 1') },
+        {
+          where: {
+            user_id: post.user_id,
+            post_count: { [Op.gt]: deletedPostCount },
+          },
+          transaction: t
+        }
+      );
+
+      await t.commit(); // 트랜잭션 커밋
 
       return res.status(200).json({
         success: true,
-        message: `게시물 ${id}이 성공적으로 삭제되었습니다.`
+        message: `게시물 ${ looktoday_id }이 성공적으로 삭제되었습니다.`
       });
 
     } catch (error) {
+      await t.rollback(); // 트랜잭션 롤백
       console.error(error);
       return res.status(500).json({
         success: false,
