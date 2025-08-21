@@ -59,12 +59,7 @@ class User extends Sequelize.Model {
         
     }
     static associate(db) {
-
         db.User.hasMany(db.Post, { foreignKey: 'user_id', sourceKey: 'user_id' });
-    }
-    static associate(db) {
-        // User 모델은 Post 모델과 1:N 관계
-        db.User.hasMany(db.Post, { foreignKey: 'id', sourceKey: 'id' });
     }
 }
 
