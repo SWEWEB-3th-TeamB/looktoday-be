@@ -9,18 +9,14 @@ const cookieParser = require('cookie-parser');
 const app = express();
 
 
-
 const looksRoutes = require('./routes/looks.js');
-
 
 const db = require('./models'); //db
 const lookPostRouter = require('./routes/lookPost')(db); // lookPost.js 라우터 가져오기
-const imageRouter = require('./routes/image')(db); // image.js 라우터 가져오기
 const PORT = process.env.PORT || 3000;
 
 
 const authRoutes = require('./routes/auth'); //라우트 연결
-dotenv.config();
 
 app.use(express.json());
 app.use(morgan('dev'));
@@ -48,8 +44,9 @@ app.use('/api/weather', weatherRouter);
 app.use('/api/auth', authRoutes)
 app.use('/api/looks', looksRoutes);
 app.use('/api', lookPostRouter); // 게시글 업로드 라우터 연결
-app.use('/api', imageRouter); // 이미지 업로드 라우터 연결
 
+// S3 사용 전 임시적으로 로컬 uploads 폴더를 정적 파일로 제공
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); 
 
 db.sequelize.sync()
   .then(() => {
