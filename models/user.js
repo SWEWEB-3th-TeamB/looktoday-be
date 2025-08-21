@@ -4,6 +4,13 @@ const { DataTypes } = require('sequelize');
 class User extends Sequelize.Model {
     static initiate(sequelize) {
         User.init({
+            //사용자 식별 번호
+            user_id: {
+                            type: Sequelize.INTEGER,
+                            allowNull: false,
+                            primaryKey: true,
+                            autoIncrement: true
+                        },
             //이메일
             email: {
                 type: Sequelize.STRING(40),
@@ -49,6 +56,11 @@ class User extends Sequelize.Model {
             charset: 'utf8',
             collate: 'utf8_general_ci',
         });
+        
+    }
+    static associate(db) {
+
+        db.User.hasMany(db.Post, { foreignKey: 'user_id', sourceKey: 'user_id' });
     }
 }
 
