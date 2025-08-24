@@ -12,7 +12,7 @@ const app = express();
 const looksRoutes = require('./routes/looks.js');
 
 const db = require('./models'); //db
-const lookPostRouter = require('./routes/lookPost 1.js')(db); // lookPost.js 라우터 가져오기
+const lookPostRouter = require('./routes/lookPost.js')(db); // lookPost.js 라우터 가져오기
 const PORT = process.env.PORT || 3000;
 
 
