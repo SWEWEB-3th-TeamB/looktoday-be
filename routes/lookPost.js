@@ -1,35 +1,62 @@
 const express = require('express');
 const multer = require('multer');
+const multerS3 = require('multer-s3');
 const path = require('path');
-const fs = require('fs');
+const AWS = require('aws-sdk');
+//const fs = require('fs');
 const { isLoggedIn } = require('../middlewares');
+
+require('dotenv').config();
 
 module.exports = (db) => {
   const router = express.Router();
   const { Post, Image, sequelize, Sequelize: { Op } } = db;
 
-  // uploads 폴더 없으면 생성
-  try {
-    fs.readdirSync('uploads');
-  } catch (error) {
-    console.log('uploads 폴더가 없어 생성합니다.');
-    fs.mkdirSync('uploads');
-  }
+  // AWS S3 설정
+  AWS.config.update({
+    accessKeyId: process.env.S3_KEY_ID,
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+    region: 'ap-northeast-2'
+  });
 
-  // multer 설정
+  const s3 = new AWS.S3();
+
+  // multer s3 설정
   const upload = multer({
-    storage: multer.diskStorage({
-      destination(req, file, cb) {
-        cb(null, 'uploads/');
-      },
-      filename(req, file, cb) {
-        const ext = path.extname(file.originalname); // 확장자 (.jpg, .png 등)
-        const uniqueName = path.basename(file.originalname, ext) + '_' + Date.now() + ext;
-        cb(null, uniqueName);
+    storage: multerS3({
+      s3,
+      bucket: process.env.S3_BUCKET_NAME,
+      contentType: multerS3.AUTO_CONTENT_TYPE,
+      acl: 'public-read',
+      key(req, file, cb) {
+        //파일 경로 및 이름 설정
+        cb(null, `uploads/${Date.now()}_${path.basename(file.originalname)}`);
       },
     }),
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB 제한
   });
+
+  // S3 파일 삭제 함수
+  const deleteFile = async (imageUrl) => {
+    // imageUrl이 유효한 s3 주소인지 확인
+    if (!imageUrl || !imageUrl.includes(process.env.S3_BUCKET_NAME)) {
+        console.log("유효한 S3 URL이 아니므로 삭제를 건너뜁니다.");
+        return;
+    }
+    try {
+        const url = new URL(imageUrl);
+        const key = url.pathname.substring(1); // 맨 앞의 '/' 제거
+
+        await s3.deleteObject({
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key: key
+        }).promise();
+        console.log(`S3 파일 삭제 성공: ${key}`);
+
+    } catch (error) {
+        console.error(`S3 파일 삭제 실패: ${imageUrl}`, error);
+    }
+  }; 
 
   // POST /api/lookPost — 이미지 + 게시글 동시 업로드
   router.post('/lookPost', isLoggedIn, upload.single('image'), async (req, res) => {
@@ -47,7 +74,7 @@ module.exports = (db) => {
         date,
         hour,
         isPublic,
-        sido, 
+        si, 
         gungu, 
         apparent_temp, 
         apparent_humidity, 
@@ -65,7 +92,7 @@ module.exports = (db) => {
       // 필수값 체크 (form-data라 isPublic은 문자열일 수 있음)
       if (
         !req.file || !comment || !apparent_temp || !apparent_humidity ||
-        (isPublic !== 'true' && isPublic !== 'false') || !sido || !gungu ||
+        (isPublic !== 'true' && isPublic !== 'false') || !si || !gungu ||
         !date || !hour // || !weather
       ) {
         return res.status(400).json({
@@ -76,7 +103,7 @@ module.exports = (db) => {
 
       // DB에 이미지 정보 저장
       const savedImage = await Image.create({
-        imageUrl: req.file.filename
+        imageUrl: req.file.location // DB에 S3 파일 URL 저장
       });
 
       const user_id = req.user.user_id; // 로그인 사용자 ID
@@ -85,7 +112,7 @@ module.exports = (db) => {
       const newPost = await Post.create({
         user_id,
         post_count: previousCount + 1,
-        sido,
+        si,
         gungu,
         apparent_temp,
         apparent_humidity,
@@ -124,7 +151,7 @@ module.exports = (db) => {
         apparent_temp,
         apparent_humidity,
         isPublic,
-        sido,
+        si,
         gungu,
         date,
         hour,
@@ -155,17 +182,19 @@ module.exports = (db) => {
       // 기존 이미지 찾아서 교체
       const image = await Image.findOne({ where: { looktoday_id } });
       if (image) {
-        await image.update({ imageUrl: req.file.filename });
+        await deleteFile(image.imageUrl); // 기존 파일 삭제
+        await image.update({ imageUrl: req.file.location }); // 이미지 URL 업데이트
       } else {
         // 기존 이미지 없으면 새로 생성
         await Image.create({
-          imageUrl: req.file.filename,
+          imageUrl: req.file.location,
           looktoday_id
         });
       }
     }
+
     await post.update({ // 업데이트
-      sido,
+      si,
       gungu,
       apparent_temp,
       apparent_humidity,
@@ -218,6 +247,10 @@ module.exports = (db) => {
       const deletedPostCount = post.post_count;
 
       // 이미지와 게시물 삭제
+      const images = await Image.findAll({ where: { looktoday_id }, transaction: t });
+      for (const image of images) {
+        await deleteFile(image.imageUrl); // S3에 있는 실제 파일 삭제
+      }
       await Image.destroy({ where: { looktoday_id }, transaction: t });
       await Post.destroy({ where: { looktoday_id }, transaction: t });
 
