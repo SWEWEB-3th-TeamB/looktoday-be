@@ -4,10 +4,17 @@ const { DataTypes } = require('sequelize');
 class User extends Sequelize.Model {
     static initiate(sequelize) {
         User.init({
+            //사용자 식별 번호
+            user_id: {
+                            type: Sequelize.INTEGER,
+                            allowNull: false,
+                            primaryKey: true,
+                            autoIncrement: true
+                        },
             //이메일
             email: {
                 type: Sequelize.STRING(40),
-                allowNull: true,
+                allowNull: false,
                 unique: true, //고유해야 함
                 validate: {
                     isEmail: true //이메일 형식 검사
@@ -25,17 +32,17 @@ class User extends Sequelize.Model {
                 unique:true //고유해야 함
             },
             //생년월일
-            dateOfBirth: {
+            birth: {
                 type: DataTypes.DATE,
-                allowNull:false
+                allowNull:true
             },
             //시/도
-            city: {
+            si: {
                 type: Sequelize.STRING(20),
                 allowNull: false
             },
             //군/구
-            district: {
+            gungu: {
                 type: Sequelize.STRING(20),
                 allowNull: false
             },                              
@@ -49,6 +56,10 @@ class User extends Sequelize.Model {
             charset: 'utf8',
             collate: 'utf8_general_ci',
         });
+        
+    }
+    static associate(db) {
+        db.User.hasMany(db.Post, { foreignKey: 'user_id', sourceKey: 'user_id' });
     }
 }
 

@@ -26,8 +26,13 @@ class Weather extends Sequelize.Model {
     }
 
     static associate(db) {
-        // Weather는 Post에 속해있습니다. (looktoday_id 외래 키 생성)
-        db.Weather.belongsTo(db.Post, { foreignKey: 'looktoday_id', targetKey: 'looktodayId' });
+        db.Weather.belongsTo(db.Post, { 
+            foreignKey: {
+                name: 'looktoday_id',
+                type: Sequelize.INTEGER 
+            }, 
+            targetKey: 'looktoday_id' 
+        });
     }
 }
 

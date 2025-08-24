@@ -1,8 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authControllers');
-const verifyToken = require('../middlewares/authMiddleware');
-const authMiddleware = require('../middlewares/authMiddleware');
+
+const { authMiddleware, isLoggedIn, isNotLoggedIn } = require('../middlewares/authMiddleware');
+const db = require('../models');
+const User = db.User;
+
+
 
 
 // 이메일 중복 확인 (GET /api/auth/check-email)
@@ -12,13 +16,13 @@ router.get('/check-email', authController.checkEmail);
 router.get('/check-username', authController.checkNickname);
 
 // 회원가입 (POST /api/auth/signup)
-router.post('/signup', authController.signup);
+router.post('/signup', isNotLoggedIn, authController.signup);
 
 //로그인 (POST /api/auth/login)
-router.post('/login', authController.login);
+router.post('/login', isNotLoggedIn, authController.login);
 
 //로그아웃 (Post /api/auth/logout)
-router.post('/logout', authController.logout);
+router.post('/logout', isLoggedIn, authController.logout);
 
 
 // 로그인 상태에서 사용자 정보 가져오기

@@ -1,5 +1,4 @@
 const Sequelize = require('sequelize');
-const { all } = require('../routes/lookPost');
 
 class Post extends Sequelize.Model {
     static initiate(sequelize) {
@@ -11,13 +10,13 @@ class Post extends Sequelize.Model {
                 primaryKey: true,
                 autoIncrement: true
             },
-            //사용자 식별번호
+            //사용자 식별번호 (외래 키)
             user_id: {
                 type: Sequelize.INTEGER,
                 allowNull: false,
-                references: {
+                references: { // 참조
                     model: 'users',
-                    key: 'id'
+                    key: 'user_id'
                 }
             },
             //사용자가 작성한 룩투데이 게시글 수
@@ -32,19 +31,23 @@ class Post extends Sequelize.Model {
                 allowNull: false, 
                 defaultValue: Sequelize.literal('CURRENT_DATE') // 현재 날짜 자동 저장
             },
-            //시간만
-            time: {
-                type: Sequelize.TIME,
+            // api 통해서 받아올 수 있는 날씨 예보 시간
+            hour: {
+                type: Sequelize.ENUM('2', '5', '8', '11', '14', '17', '20', '23'),
+                allowNull: false
+            },
+            //좋아요 수
+            like_count: {
+                type: Sequelize.INTEGER,
                 allowNull: false,
-                defaultValue: Sequelize.literal('CURRENT_TIME') // 현재 시간 자동 저장
             },
 
-            // Field
-            sido: {
+            // 지역(시/도)
+            si: {
                 type: Sequelize.STRING(20),
                 allowNull: true
             },
-            // Field2
+            // 지역(군/구)
             gungu: {
                 type: Sequelize.STRING(20),
                 allowNull: true,
@@ -60,10 +63,10 @@ class Post extends Sequelize.Model {
                 allowNull: false
             },
             // 날씨 아이콘
-            weather: {
+            /* weather: {
                 type: Sequelize.ENUM('sunny', 'cloudy', 'rainy', 'snowy'),
                 allowNull: false
-            },
+            }, */
             // 공개여부
             isPublic: {
                 type: Sequelize.BOOLEAN,
@@ -78,19 +81,20 @@ class Post extends Sequelize.Model {
         }, {
             sequelize,
             timestamps: true,
-            underscored: false,
+            underscored: true,
             modelName: 'Post',
-            tableName: 'Posts', //DB 테이블 이름
+            tableName: 'posts', //DB 테이블 이름
             paranoid: true,
-            charset: 'utf8',
-            collate: 'utf8_general_ci',
+            charset: 'utf8mb4',
+            collate: 'utf8mb4_general_ci',
         });
     }
 
-    /* static associate(db) {
-        db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'id' });
-        db.Post.hasMany(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
-    } */
+    static associate(db) {
+        // Post 모델은 User 모델에 속해있음
+        db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'user_id' });
+        db.Post.hasOne(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
+    }
 }
 
 module.exports = Post;

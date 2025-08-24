@@ -1,5 +1,4 @@
 const Sequelize = require('sequelize');
-const { all } = require('../routes/lookPost');
 
 class Image extends Sequelize.Model {
     static initiate(sequelize) {
@@ -16,12 +15,12 @@ class Image extends Sequelize.Model {
                 type: Sequelize.STRING(1000),
                 allowNull: false
             },
-            // 룩투데이 식별번호
+            // 룩투데이 식별번호 (외래키)
             looktoday_id: {
                 type: Sequelize.INTEGER,
-                allowNull: true,
+                allowNull: true, // POST 생성 후 id 업데이트하므로 null값 허용
                 defaultValue: null,
-                references: {
+                references: { // 참조 
                     model: 'Posts',
                     key: 'looktoday_id'
                 },
@@ -33,16 +32,16 @@ class Image extends Sequelize.Model {
             timestamps: true,
             underscored: false,
             modelName: 'Image',
-            tableName: 'Images', //DB 테이블 이름
+            tableName: 'images', //DB 테이블 이름
             paranoid: true,
             charset: 'utf8',
             collate: 'utf8_general_ci',
         });
     }
-    /* static associate(db) {
+    static associate(db) {
+        // Image 모델은 Post 모델에 속해있음
         db.Image.belongsTo(db.Post, { foreignKey: 'looktoday_id', targetKey: 'looktoday_id' });
-        db.Image.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'id' });
-    } */
+    }
 }
 
 module.exports = Image;

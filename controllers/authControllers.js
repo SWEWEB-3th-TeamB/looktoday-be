@@ -55,10 +55,10 @@ exports.checkNickname = async (req, res) => {
 
 // --- 회원가입 처리 컨트롤러 함수 (POST /api/auth/signup) ---
 exports.signup = async (req, res) => {
-    const { email, password, confirmPassword, nickname, dateOfBirth, city, district } = req.body;
+    const { email, password, confirmPassword, nickname, birth, si, gungu } = req.body;
 
     try {
-        if (!email || !password || !confirmPassword || !nickname || !dateOfBirth) {
+        if (!email || !password || !confirmPassword || !nickname || !birth) {
             return res.status(400).json({ message: '모든 필수 정보를 입력해주세요.' });
         }
 
@@ -76,7 +76,7 @@ exports.signup = async (req, res) => {
             return res.status(409).json({ message: '이미 사용 중인 닉네임입니다.' });
         }
 
-        const parsedDateOfBirth = new Date(dateOfBirth);
+        const parsedDateOfBirth = new Date(birth);
         if (isNaN(parsedDateOfBirth.getTime())) {
             return res.status(400).json({ message: '유효하지 않은 생년월일 형식입니다. YYYY/MM/DD 형식으로 입력해주세요.' });
         }
@@ -88,14 +88,14 @@ exports.signup = async (req, res) => {
             email,
             password: hashedPassword,
             nickname,
-            dateOfBirth: parsedDateOfBirth,
-            city,
-            district
+            birth: parsedDateOfBirth,
+            si,
+            gungu
         });
 
         return res.status(201).json({
             message: '회원가입이 완료되었습니다.',
-            userId: newUser.id
+            user_id: newUser.user_id
         });
 
     } catch (error) {
@@ -134,19 +134,21 @@ exports.login = async (req, res) => {
 
         // JWT 발급
          const token = jwt.sign(
-             { id: user.id, email: user.email },  // 토큰 payload
+             { user_id: user.user_id, email: user.email },  // 토큰 payload
              process.env.JWT_SECRET,              // 비밀키
               { expiresIn: '1h' }                   // 만료 시간
          );
+
+         console.log('토큰에 담긴 정보:', { user_id: user.user_id, email: user.email });
 
         return res.json({
              message: '로그인에 성공했습니다.',
              token, // 토큰 추가
              user: {
-              id: user.id,
+              user_id: user.user_id,
               email: user.email,
               nickname: user.nickname,
-              dateOfBirth: user.dateOfBirth,
+              birth: user.birth,
       },
     });
 
