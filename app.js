@@ -41,9 +41,10 @@ const weatherRouter = require('./routes/weather');
 app.use('/api/weather', weatherRouter);
 //라우트 연결 (/api/auth로 들어오는 요청 처리)
 
-app.use('/api/auth', authRoutes)
+app.use('/api/auth', authRoutes);
 app.use('/api/looks', looksRoutes);
 app.use('/api', lookPostRouter); // 게시글 업로드 라우터 연결
+//app.use('/api/users', mypageRoutes);
 
 // S3 사용 전 임시적으로 로컬 uploads 폴더를 정적 파일로 제공
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); 
