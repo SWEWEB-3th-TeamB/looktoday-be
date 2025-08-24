@@ -16,7 +16,6 @@ class Image extends Sequelize.Model {
                 type: Sequelize.STRING(1000),
                 allowNull: false
             },
-            // // 룩투데이 식별번호
             // looktoday_id: {
             //     type: Sequelize.INTEGER,
             //     allowNull: true,

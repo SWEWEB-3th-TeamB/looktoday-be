@@ -14,7 +14,7 @@ router.get('/check-username', authController.checkNickname);
 // 회원가입 (POST /api/auth/signup)
 router.post('/signup', authController.signup);
 
-//로그인 (POST /api/auth/login)
+//로그인  (POST /api/auth/login)
 router.post('/login', authController.login);
 
 //로그아웃 (Post /api/auth/logout)

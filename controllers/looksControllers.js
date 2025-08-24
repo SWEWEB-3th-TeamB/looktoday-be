@@ -2,7 +2,7 @@ const { Post, Like, Image, User } = require('../models');
 const { ApiResponse } = require('../response');
 const { Op } = require('sequelize');
 
-// 필터링/정렬된 일반 목록 조회
+// 필터링, 정렬된 일반 목록 조회
 exports.getLooks = async (req, res) => {
     try {
         const { sort = 'latest', page = 1, limit = 20, sido, gungu, date, weather } = req.query;

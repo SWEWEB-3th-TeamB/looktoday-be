@@ -4,7 +4,7 @@ const { DataTypes } = require('sequelize');
 class User extends Sequelize.Model {
     static initiate(sequelize) {
         User.init({
-            //사용자 식별 번호
+            //사용자 식별번호
             user_id: {
                             type: Sequelize.INTEGER,
                             allowNull: false,

@@ -1,2 +1,6 @@
-# Dependencies
-/node_modules
+node_modules/
+
+.env
+uploads/
+
+looktoday-aws-key.pem

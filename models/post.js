@@ -51,7 +51,7 @@ class Post extends Sequelize.Model {
                 type: Sequelize.BOOLEAN,
                 allowNull: false
             },
-            // 코디 한 줄 평가
+            // 코디 한 줄 평
             comment: {
                type: Sequelize.STRING(40),
                allowNull: true
