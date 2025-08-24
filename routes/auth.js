@@ -7,9 +7,6 @@ const db = require('../models');
 const User = db.User;
 
 const verifyToken = require('../middlewares/authMiddleware');
-const authMiddleware = require('../middlewares/authMiddleware');
-
-
 
 // 이메일 중복 확인 (GET /api/auth/check-email)
 router.get('/check-email', authController.checkEmail);

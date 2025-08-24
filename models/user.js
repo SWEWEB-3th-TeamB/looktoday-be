@@ -14,7 +14,7 @@ class User extends Sequelize.Model {
             //이메일
             email: {
                 type: Sequelize.STRING(40),
-                allowNull: true,
+                allowNull: false,
                 unique: true, //고유해야 함
                 validate: {
                     isEmail: true //이메일 형식 검사
@@ -32,9 +32,9 @@ class User extends Sequelize.Model {
                 unique:true //고유해야 함
             },
             //생년월일
-            dateOfBirth: {
+            birth: {
                 type: DataTypes.DATE,
-                allowNull:false
+                allowNull:true
             },
             //시/도
             si: {

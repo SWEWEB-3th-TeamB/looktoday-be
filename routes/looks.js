@@ -3,7 +3,7 @@ const router = express.Router();
 
 const looksControllers = require('../controllers/looksControllers.js');
 
-const { authMiddleware}  = require('../middlewares/authMiddleware.js');
+const { authMiddleware } = require('../middlewares/authMiddleware.js');
 
 // GET /api/looks - 룩 목록 조회
 router.get('/', looksControllers.getLooks);
