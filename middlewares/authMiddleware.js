@@ -8,7 +8,7 @@ const authMiddleware = (req, res, next) => {
       return res.status(401).json({ message: 'Authorization 헤더가 없습니다.' });
     }
 
-    // "Bearer "로 시작하는지 확인
+    // "Bearer"로 시작하는지 확인
     if (!authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ message: '잘못된 인증 형식입니다.' });
     }
