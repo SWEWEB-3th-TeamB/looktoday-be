@@ -6,65 +6,74 @@ const path = require('path');
 const cors = require('cors');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
-const app = express();
 
-
-
+const authRoutes = require('./routes/auth');
+const weatherRoutes = require('./routes/weather');
 const looksRoutes = require('./routes/looks.js');
 
+const db = require('./models');
+const weatherCron = require('./services/weatherCron');
 
-const db = require('./models'); //db
-const lookPostRouter = require('./routes/lookPost')(db); // lookPost.js 라우터 가져오기
-const imageRouter = require('./routes/image')(db); // image.js 라우터 가져오기
 const PORT = process.env.PORT || 3000;
 
+const app = express();
+app.set('port', PORT);
 
-const authRoutes = require('./routes/auth'); //라우트 연결
-dotenv.config();
+/* 1) 헬스체크 */
+app.get('/ping', (req, res) => res.status(200).send('pong'));
 
-app.use(express.json());
+/* 2) 로깅 */
 app.use(morgan('dev'));
-app.use('/',express.static(path.join(__dirname, 'public')));
-app.use(express.urlencoded({ extended: false}));
+app.use((req, res, next) => {
+  console.log('ENTER', req.method, req.originalUrl);
+  res.on('finish', () => console.log('FINISH', req.method, req.originalUrl, res.statusCode));
+  next();
+});
+
+/* 3) 일반 미들웨어 */
+app.use(cors());
+app.use('/', express.static(path.join(__dirname, 'public')));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
+/* 4) 기본 라우트 */
+app.get('/', (req, res) => res.send('Hello World'));
 
-app.get('/', (req, res) => {
-    res.send('Hello World');
-});
-
-app.listen(app.get('port'),()=>{
-    console.log(app.get('port'),'번 포트에서 대기 중');
-});
-
-// routes 폴더에서 weather.js 파일을 불러옵니다.
-const weatherRouter = require('./routes/weather');
-
-// app.use(...) 부분에 아래 코드를 추가하여 라우터를 연결합니다.
-// 이제 /api/weather 경로로 들어오는 모든 요청은 weatherRouter가 처리합니다.
-app.use('/api/weather', weatherRouter);
-//라우트 연결 (/api/auth로 들어오는 요청 처리)
-
-app.use('/api/auth', authRoutes)
+/* 5) 기능 라우트 */
+app.use('/api/auth', authRoutes);
+app.use('/api/weather', weatherRoutes);
 app.use('/api/looks', looksRoutes);
-app.use('/api', lookPostRouter); // 게시글 업로드 라우터 연결
-app.use('/api', imageRouter); // 이미지 업로드 라우터 연결
 
+// (프로젝트에 존재한다면) lookPost / image 라우터 연결
+try {
+  const lookPostRouter = require('./routes/lookPost')(db);
+  const imageRouter = require('./routes/image')(db);
+  app.use('/api', lookPostRouter);
+  app.use('/api', imageRouter);
+} catch (e) {
+  // 선택: 없는 라우터면 조용히 패스
+}
 
+/* 6) 404 */
+app.use((req, res) => res.status(404).json({ error: 'Not Found' }));
+
+/* 7) 에러 핸들러 */
+app.use((err, req, res, next) => {
+  console.error('Global error:', err);
+  if (res.headersSent) return next(err);
+  return res.status(500).json({ error: 'Internal Server Error' });
+});
+
+/* 8) DB 연결 후 서버 시작 */
 db.sequelize.sync()
   .then(() => {
     console.log('DB 연결 및 테이블 생성 완료');
-    // 서버 시작 코드 위치
     app.listen(PORT, () => {
       console.log(`${PORT}번 포트에서 대기 중`);
+      if (weatherCron?.start) weatherCron.start();
     });
   })
   .catch((err) => {
     console.error('DB 연결 실패:', err);
   });
-
-
-
-app.get('/', (req, res) => {
-    res.send('Hello World');
-});

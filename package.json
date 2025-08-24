@@ -1,20 +1,21 @@
 {
   "name": "looktoday",
   "version": "1.0.0",
+  "description": "",
   "main": "app.js",
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "engines": { "node": ">=18" },
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC",
+  "keywords": [],
   "dependencies": {
-<<<<<<< HEAD
     "axios": "^1.11.0",
-=======
     "bcrypt": "^6.0.0",
->>>>>>> 290885e0271b9d1c25e84ca9975491a0077ba429
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
@@ -22,14 +23,13 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
-    "mysql2": "^3.14.2",
+    "mysql2": "^3.14.3",
+    "node-cron": "^4.2.1",
     "nodemailer": "^7.0.5",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "sequelize": "^6.37.7"
   },
-  "keywords": [],
-  "description": "",
   "devDependencies": {
     "nodemon": "^3.1.10",
     "sequelize-cli": "^6.6.3"
