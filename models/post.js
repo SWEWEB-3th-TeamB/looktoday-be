@@ -43,7 +43,7 @@ class Post extends Sequelize.Model {
             },
 
             // 지역(시/도)
-            sido: {
+            si: {
                 type: Sequelize.STRING(20),
                 allowNull: true
             },
