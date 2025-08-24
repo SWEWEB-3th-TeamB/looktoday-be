@@ -68,13 +68,13 @@ exports.getLooks = async (req, res) => {
         const totalPages = Math.ceil(totalPosts / limit);
         const offset = (page - 1) * parseInt(limit);
         const paginatedPosts = allMatchingPosts.slice(offset, offset + parseInt(limit));
-        
+
         const result = {
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
-                totalPosts: totalPosts,
-                totalPages: totalPages
+                totalPosts: paginatedResult.count,
+                totalPages: Math.ceil(paginatedResult.count / limit)
             },
             looks: paginatedPosts
         };

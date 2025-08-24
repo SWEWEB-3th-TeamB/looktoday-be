@@ -5,7 +5,7 @@ const db = require('../models');
 const jwt = require('jsonwebtoken');
 
 const User = db.User;             
-const { sendVerificationEmail } = require('../utils/email'); // 이메일 발송 유틸리티 임포트
+const { sendVerificationEmail } = require('../utils/email'); // 이메일 발송 유틸리티 임포트.
 
 dotenv.config(); // .env 파일 로드
 
@@ -95,7 +95,7 @@ exports.signup = async (req, res) => {
 
         return res.status(201).json({
             message: '회원가입이 완료되었습니다.',
-            userId: newUser.id
+            user_id: newUser.user_id
         });
 
     } catch (error) {
@@ -134,16 +134,18 @@ exports.login = async (req, res) => {
 
         // JWT 발급
          const token = jwt.sign(
-             { id: user.id, email: user.email },  // 토큰 payload
+             { id: user.user_id, email: user.email },  // 토큰 payload
              process.env.JWT_SECRET,              // 비밀키
               { expiresIn: '1h' }                   // 만료 시간
          );
+
+         console.log('토큰에 담긴 정보:', { id: user.user_id, email: user.email });
 
         return res.json({
              message: '로그인에 성공했습니다.',
              token, // 토큰 추가
              user: {
-              id: user.id,
+              id: user.user_id,
               email: user.email,
               nickname: user.nickname,
               dateOfBirth: user.dateOfBirth,

@@ -8,7 +8,7 @@ class Weather extends Sequelize.Model {
                 autoIncrement: true,
                 primaryKey: true,
             },
-            // ERD에 'Field'라고만 나와있어 임의로 'description'으로 이름 짓고 문자열로 설정했습니다.
+            // 날씨 정보 저장
             description: {
                 type: Sequelize.STRING(100),
                 allowNull: true,
@@ -26,8 +26,13 @@ class Weather extends Sequelize.Model {
     }
 
     static associate(db) {
-        // Weather는 Post에 속해있습니다. (looktoday_id 외래 키 생성)
-        db.Weather.belongsTo(db.Post, { foreignKey: 'looktoday_id', targetKey: 'looktodayId' });
+        db.Weather.belongsTo(db.Post, { 
+            foreignKey: {
+                name: 'looktoday_id',
+                type: Sequelize.INTEGER 
+            }, 
+            targetKey: 'looktoday_id' 
+        });
     }
 }
 

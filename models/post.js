@@ -24,7 +24,6 @@ class Post extends Sequelize.Model {
                 type: Sequelize.INTEGER,
                 allowNull: false,
             },
-
             // 날짜만
             date: {
                 type: Sequelize.DATEONLY,
@@ -43,7 +42,7 @@ class Post extends Sequelize.Model {
             },
 
             // 지역(시/도)
-            sido: {
+            si: {
                 type: Sequelize.STRING(20),
                 allowNull: true
             },
@@ -72,7 +71,7 @@ class Post extends Sequelize.Model {
                 type: Sequelize.BOOLEAN,
                 allowNull: false
             },
-            // 코디 한 줄 평가
+            // 코디 한 줄 평
             comment: {
                type: Sequelize.STRING(40),
                allowNull: true
