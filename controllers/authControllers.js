@@ -66,6 +66,13 @@ exports.signup = async (req, res) => {
             return res.status(400).json({ message: '비밀번호와 비밀번호 확인이 일치하지 않습니다.' });
         }
 
+        const passwordRegex = /^(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,}$/;
+        if(!passwordRegex.test(password)) {
+            return res.status(400).json({
+                message: '올바른 비밀번호 형식이 아닙니다.'
+            });
+        }
+
         const existingUserByEmail = await User.findOne({ where: { email } });
         if (existingUserByEmail) {
             return res.status(409).json({ message: '이미 가입된 이메일 주소입니다.' });

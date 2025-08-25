@@ -30,7 +30,7 @@ router.get('/me', authMiddleware, async (req, res) => {
   try {
     // authMiddleware에서 req.user에 토큰 정보(id, email) 넣어줌
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'email', 'nickname', 'dateOfBirth']
+      attributes: ['user_id', 'email', 'nickname', 'birth', 'si', 'gungu']
     });
 
     if (!user) {

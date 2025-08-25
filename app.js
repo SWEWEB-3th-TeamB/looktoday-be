@@ -18,6 +18,8 @@ const PORT = process.env.PORT || 3000;
 
 const authRoutes = require('./routes/auth'); //라우트 연결
 
+const mypageRoutes = require('./routes/mypage');
+
 app.use(express.json());
 app.use(morgan('dev'));
 app.use('/',express.static(path.join(__dirname, 'public')));
@@ -29,9 +31,7 @@ app.get('/', (req, res) => {
     res.send('Hello World');
 });
 
-app.listen(app.get('port'),()=>{
-    console.log(app.get('port'),'번 포트에서 대기 중');
-});
+
 
 // routes 폴더에서 weather.js 파일을 불러옵니다.
 const weatherRouter = require('./routes/weather');
@@ -42,9 +42,10 @@ app.use('/api/weather', weatherRouter);
 //라우트 연결 (/api/auth로 들어오는 요청 처리)
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', mypageRoutes);
 app.use('/api/looks', looksRoutes);
 app.use('/api', lookPostRouter); // 게시글 업로드 라우터 연결
-//app.use('/api/users', mypageRoutes);
+
 
 // S3 사용 전 임시적으로 로컬 uploads 폴더를 정적 파일로 제공
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); 
