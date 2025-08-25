@@ -21,7 +21,7 @@ class Image extends Sequelize.Model {
                 allowNull: true, // POST 생성 후 id 업데이트하므로 null값 허용
                 defaultValue: null,
                 references: { // 참조 
-                    model: 'Posts',
+                    model: 'posts',
                     key: 'looktoday_id'
                 },
                 onUpdate: 'CASCADE',
