@@ -86,7 +86,7 @@ class Post extends Sequelize.Model {
             timestamps: true,
             underscored: true,
             modelName: 'Post',
-            tableName: 'Posts', //DB 테이블 이름
+            tableName: 'posts', //DB 테이블 이름
             paranoid: true,
             charset: 'utf8mb4',
             collate: 'utf8mb4_general_ci',
