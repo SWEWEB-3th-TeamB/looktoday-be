@@ -5,7 +5,7 @@ const db = require('../models');
 const jwt = require('jsonwebtoken');
 
 const User = db.User;             
-const { sendVerificationEmail } = require('../utils/email'); // 이메일 발송 유틸리티 임포트
+const { sendVerificationEmail } = require('../utils/email'); // 이메일 발송 유틸리티 임포트.
 
 dotenv.config(); // .env 파일 로드
 

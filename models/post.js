@@ -24,16 +24,15 @@ class Post extends Sequelize.Model {
                 type: Sequelize.INTEGER,
                 allowNull: false,
             },
-
             // 날짜만
             date: {
                 type: Sequelize.DATEONLY,
                 allowNull: false, 
-                defaultValue: Sequelize.literal('CURRENT_DATE') // 현재 날짜 자동 저장
+                defaultValue: Sequelize.NOW // 현재 날짜 자동 저장
             },
             // api 통해서 받아올 수 있는 날씨 예보 시간
             hour: {
-                type: Sequelize.ENUM('2', '5', '8', '11', '14', '17', '20', '23'),
+                type: Sequelize.ENUM("'0','1', '2', '3', '4', '5', '6', '7', '8', '9', '10, '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23','24'"),
                 allowNull: false
             },
             //좋아요 수
@@ -43,7 +42,7 @@ class Post extends Sequelize.Model {
             },
 
             // 지역(시/도)
-            sido: {
+            si: {
                 type: Sequelize.STRING(20),
                 allowNull: true
             },
@@ -72,7 +71,7 @@ class Post extends Sequelize.Model {
                 type: Sequelize.BOOLEAN,
                 allowNull: false
             },
-            // 코디 한 줄 평가
+            // 코디 한 줄 평
             comment: {
                type: Sequelize.STRING(40),
                allowNull: true
@@ -94,6 +93,8 @@ class Post extends Sequelize.Model {
         // Post 모델은 User 모델에 속해있음
         db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'user_id' });
         db.Post.hasOne(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
+        db.Post.hasOne(db.Like, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
+        db.Post.hasOne(db.Weather, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id', as: 'Weather'});
     }
 }
 

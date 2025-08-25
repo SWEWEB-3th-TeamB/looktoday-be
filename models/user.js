@@ -60,6 +60,7 @@ class User extends Sequelize.Model {
     }
     static associate(db) {
         db.User.hasMany(db.Post, { foreignKey: 'user_id', sourceKey: 'user_id' });
+        db.User.hasMany(db.Like, { foreignKey: 'user_id', sourceKey: 'user_id' });
     }
 }
 
