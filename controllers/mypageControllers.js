@@ -4,6 +4,7 @@ const { getAttributes } = require('../models/image');
 const User = db.User;
 const Post = db.Post;
 const Like = db.Like;
+const Image = db.Image;
 
 //페이징 파서
 function getPaging(req) {
@@ -272,7 +273,9 @@ exports.getMyLikes = async (req, res) => {
     const { page, limit, offset } =getPaging(req);
     const dataFilter = buildDateFilter(req.query);
 
-    const {rows, count} = await Look.findAndCountAll({
+    const whereClause = { user_id: req.user.id, ...dataFilter };
+
+    const {rows, count} = await Like.findAndCountAll({
       include: [
         {
           model: Post,
@@ -307,6 +310,18 @@ exports.getMyLikes = async (req, res) => {
       })
     );
 
+        // 어떤 필터를 사용했는지
+    let filter = { type: 'period', value: '12m' };
+    if (req.query.month) filter = { type: 'month', value: req.query.month };
+    else if (req.query.dateFrom || req.query.dateTo) {
+      filter = {
+        type: 'range',
+        value: `${req.query.dateFrom || '2020-01-01'}~${req.query.dateTo || '오늘'}`
+      };
+    } else if (req.query.period) {
+      filter = { type: 'period', value: req.query.period };
+    }
+
     return res.json({
       httpStatus: 'OK',
       isSuccess: true,
@@ -324,7 +339,7 @@ exports.getMyLikes = async (req, res) => {
     });
   } catch (e) {
     console.error(e);
-    return res.status(500),json({
+    return res.status(500).json({
       httpStatus: 'INTERNAL_SERVER_ERROR',
       isSuccess: false,
       message: '서버 오류입니다.',
@@ -335,34 +350,37 @@ exports.getMyLikes = async (req, res) => {
 // 내 룩 삭제하기
 exports.deleteMyLook = async (req, res) => {
   try {
-    const {looktoday_id} = req.params;
 
-    //내가 쓴 글인지 확인
+    const { looktoday_id } = req.params;
+
+    // 내가 쓴 글인지 확인
     const post = await Post.findOne({
-      where: {looktoday_id: looktoday_id, user_id: req.user_id},
-      include: [{ model: Image }],
+      where: { looktoday_id: looktoday_id, user_id: req.user.id },
+      include: [{ model: db.Image }], // 모델 import 맞게 확인
     });
 
     if (!post) {
       return res.status(404).json({
         httpStatus: 'NOT_FOUND',
         isSuccess: false,
-        message: '해당 게시물을 찾을 수 없습니다. ',
+        message: '해당 게시물을 찾을 수 없습니다.',
       });
     }
-    
-    //post에 연결 되어있는 이미지도 삭제
-    if (post.Image) {
-      await post.Image.destroy();
+
+    // post에 연결된 이미지도 삭제
+    if (post.Images && post.Images.length > 0) { 
+      for (const img of post.Images) {
+        await img.destroy(); // DB에서 완전 삭제
+      }
     }
 
-    //post 삭제
-    await post.destroy();
+    // post 삭제 (DB에서 완전 삭제)
+    await post.destroy({ force: true }); // 물리삭제
 
     return res.json({
       httpStatus: 'OK',
       isSuccess: true,
-      message: '게시물이 삭제되었습니다.'
+      message: '게시물이 삭제되었습니다.',
     });
   } catch (e) {
     console.error(e);
@@ -373,5 +391,8 @@ exports.deleteMyLook = async (req, res) => {
     });
   }
 };
+
+
+
 
 
