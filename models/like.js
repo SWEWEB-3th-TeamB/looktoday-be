@@ -24,6 +24,7 @@ class Like extends Sequelize.Model {
             //         key: 'looktoday_id',
             //     }
             // }
+
         }, {
             sequelize,
             timestamps: true, // 생성/수정 시각 자동 기록

@@ -5,7 +5,7 @@ const db = require('../models');
 const jwt = require('jsonwebtoken');
 
 const User = db.User;             
-const { sendVerificationEmail } = require('../utils/email'); // 이메일 발송 유틸리티 임포트
+const { sendVerificationEmail } = require('../utils/email'); // 이메일 발송 유틸리티 임포트.
 
 dotenv.config(); // .env 파일 로드
 
@@ -64,6 +64,13 @@ exports.signup = async (req, res) => {
 
         if (password !== confirmPassword) {
             return res.status(400).json({ message: '비밀번호와 비밀번호 확인이 일치하지 않습니다.' });
+        }
+
+        const passwordRegex = /^(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,}$/;
+        if(!passwordRegex.test(password)) {
+            return res.status(400).json({
+                message: '올바른 비밀번호 형식이 아닙니다.'
+            });
         }
 
         const existingUserByEmail = await User.findOne({ where: { email } });

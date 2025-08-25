@@ -8,7 +8,7 @@ const authMiddleware = (req, res, next) => {
       return res.status(401).json({ message: 'Authorization 헤더가 없습니다.' });
     }
 
-    // "Bearer "로 시작하는지 확인
+    // "Bearer"로 시작하는지 확인
     if (!authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ message: '잘못된 인증 형식입니다.' });
     }
@@ -21,7 +21,10 @@ const authMiddleware = (req, res, next) => {
 
     // 토큰 검증
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // req.user.id, req.user.email로 접근 가능
+    req.user = {
+      id: decoded.user_id,
+      email: decoded.email
+    }
 
     next(); // 다음 미들웨어로 이동
   } catch (err) {
@@ -39,7 +42,10 @@ const isLoggedIn = (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+        req.user = {
+      id: decoded.user_id,
+      email: decoded.email
+    }
     next();
   } catch (err) {
     return res.status(401).json({ message: '유효하지 않은 토큰입니다.'});
