@@ -32,8 +32,9 @@ class Post extends Sequelize.Model {
                 defaultValue: Sequelize.literal('CURRENT_DATE') // 현재 날짜 자동 저장
             },
             // api 통해서 받아올 수 있는 날씨 예보 시간
-            hour: {
-                type: Sequelize.ENUM('2', '5', '8', '11', '14', '17', '20', '23'),
+            hour: { // 우선 문자열로 설정, 나중에 숫자로 바꿀 수도
+                type: Sequelize.ENUM('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', 
+                    '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'),
                 allowNull: false
             },
             //좋아요 수
@@ -62,11 +63,6 @@ class Post extends Sequelize.Model {
                 type: Sequelize.ENUM('습해요', '괜찮아요', '건조해요'),
                 allowNull: false
             },
-            // 날씨 아이콘
-            /* weather: {
-                type: Sequelize.ENUM('sunny', 'cloudy', 'rainy', 'snowy'),
-                allowNull: false
-            }, */
             // 공개여부
             isPublic: {
                 type: Sequelize.BOOLEAN,
@@ -76,14 +72,22 @@ class Post extends Sequelize.Model {
             comment: {
                type: Sequelize.STRING(40),
                allowNull: true
+            },
+            // 날씨 Id
+            weather_id: {
+                type: Sequelize.BIGINT,
+                allowNull: true,
+                references: {
+                    model: 'weather',
+                    key: 'id'
+                }
             }
-
         }, {
             sequelize,
             timestamps: true,
             underscored: true,
             modelName: 'Post',
-            tableName: 'posts', //DB 테이블 이름
+            tableName: 'Posts', //DB 테이블 이름
             paranoid: true,
             charset: 'utf8mb4',
             collate: 'utf8mb4_general_ci',
@@ -94,6 +98,7 @@ class Post extends Sequelize.Model {
         // Post 모델은 User 모델에 속해있음
         db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'user_id' });
         db.Post.hasOne(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
+        db.Post.belongsTo(db.Weather, { foreignKey: 'weather_id', targetKey: 'id' });
     }
 }
 

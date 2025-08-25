@@ -26,13 +26,7 @@ class Weather extends Sequelize.Model {
     }
 
     static associate(db) {
-        db.Weather.belongsTo(db.Post, { 
-            foreignKey: {
-                name: 'looktoday_id',
-                type: Sequelize.INTEGER 
-            }, 
-            targetKey: 'looktoday_id' 
-        });
+        db.Weather.hasMany(db.Post, { foreignKey: 'weather_id', sourceKey: 'id' });
     }
 }
 
