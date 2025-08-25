@@ -21,6 +21,9 @@ const authRoutes = require('./routes/auth'); //라우트 연결
 const mypageRoutes = require('./routes/mypage');
 
 app.use(express.json());
+
+// cors 설정
+app.use(cors()); // 도메인 구매 후 변경
 app.use(morgan('dev'));
 app.use('/',express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: false}));
@@ -52,14 +55,27 @@ app.use('/api', lookPostRouter); // 게시글 업로드 라우터 연결
 // S3 사용 전 임시적으로 로컬 uploads 폴더를 정적 파일로 제공
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); 
 
-db.sequelize.sync()
-  .then(() => {
-    console.log('DB 연결 및 테이블 생성 완료');
+db.sequelize.authenticate()
+  .then(async () => {
+    console.log('DB 연결 성공');
+
+    // 테이블 생성 순서 주의
+    // User -> Weather -> Post -> Like -> Image
+    await db.User.sync({ alter: true }); // alter : true 옵션으로 db 업데이트
+    await db.Weather.sync({ alter: true });
+    await db.Post.sync({ alter: true });
+
+    await db.Like.sync({ alter: true });
+    await db.Image.sync({ alter: true });
+
+    console.log('테이블 생성 및 업데이트 완료');
+
     // 서버 시작 코드 위치
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`${PORT}번 포트에서 대기 중`);
     });
   })
+
   .catch((err) => {
     console.error('DB 연결 실패:', err);
   });
