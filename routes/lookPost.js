@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
@@ -5,8 +7,6 @@ const path = require('path');
 const AWS = require('aws-sdk');
 //const fs = require('fs');
 const { isLoggedIn } = require('../middlewares');
-
-require('dotenv').config();
 
 module.exports = (db) => {
   const router = express.Router();
