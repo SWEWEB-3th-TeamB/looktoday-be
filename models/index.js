@@ -14,19 +14,25 @@ db.User.initiate(sequelize);
 db.Weather = require('./weather');
 db.Weather.initiate(sequelize);
 
-db.Like = require('./like');
-db.Like.initiate(sequelize);
-
 db.Post = require('./post');
 db.Post.initiate(sequelize);
+
+db.Like = require('./like');
+db.Like.initiate(sequelize);
 
 db.Image = require('./image');
 db.Image.initiate(sequelize);
 
-db.Post.associate(db);
+Object.keys(db).forEach(modelName => {
+    if (db[modelName].associate) {
+        db[modelName].associate(db);
+    }
+});
+
+/* db.Post.associate(db);
 db.Image.associate(db); 
 db.User.associate(db);
 db.Like.associate(db);
-db.Weather.associate(db);
+db.Weather.associate(db); */
 
 module.exports = db;
