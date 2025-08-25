@@ -14,10 +14,10 @@ class Post extends Sequelize.Model {
             user_id: {
                 type: Sequelize.INTEGER,
                 allowNull: false,
-                references: { // 참조
+             /*   references: { // 참조
                     model: 'users',
                     key: 'user_id'
-                }
+                } */
             },
             //사용자가 작성한 룩투데이 게시글 수
             post_count: {
@@ -76,10 +76,10 @@ class Post extends Sequelize.Model {
             weather_id: {
                 type: Sequelize.BIGINT,
                 allowNull: true,
-                references: {
+                /* references: {
                     model: 'weather',
                     key: 'id'
-                }
+                } */
             }
         }, {
             sequelize,

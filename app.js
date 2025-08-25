@@ -61,12 +61,14 @@ db.sequelize.authenticate()
 
     // 테이블 생성 순서 주의
     // User -> Weather -> Post -> Like -> Image
-    await db.User.sync({ alter: true }); // alter : true 옵션으로 db 업데이트
+    /* await db.User.sync({ alter: true }); // alter : true 옵션으로 db 업데이트
     await db.Weather.sync({ alter: true });
     await db.Post.sync({ alter: true });
 
     await db.Like.sync({ alter: true });
-    await db.Image.sync({ alter: true });
+    await db.Image.sync({ alter: true }); */
+
+    await db.sequelize.sync({ alter: true });
 
     console.log('테이블 생성 및 업데이트 완료');
 
