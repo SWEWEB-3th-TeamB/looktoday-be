@@ -24,12 +24,11 @@ class Post extends Sequelize.Model {
                 type: Sequelize.INTEGER,
                 allowNull: false,
             },
-
             // 날짜만
             date: {
                 type: Sequelize.DATEONLY,
                 allowNull: false, 
-                defaultValue: Sequelize.literal('CURRENT_DATE') // 현재 날짜 자동 저장
+                defaultValue: Sequelize.NOW // 현재 날짜 자동 저장
             },
             // api 통해서 받아올 수 있는 날씨 예보 시간
             hour: { // 우선 문자열로 설정, 나중에 숫자로 바꿀 수도
@@ -68,7 +67,7 @@ class Post extends Sequelize.Model {
                 type: Sequelize.BOOLEAN,
                 allowNull: false
             },
-            // 코디 한 줄 평가
+            // 코디 한 줄 평
             comment: {
                type: Sequelize.STRING(40),
                allowNull: true
@@ -99,6 +98,7 @@ class Post extends Sequelize.Model {
         db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'user_id' });
         db.Post.hasOne(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
         db.Post.belongsTo(db.Weather, { foreignKey: 'weather_id', targetKey: 'id' });
+        db.Post.hasOne(db.Like, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
     }
 }
 

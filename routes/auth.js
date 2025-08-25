@@ -6,8 +6,7 @@ const { authMiddleware, isLoggedIn, isNotLoggedIn } = require('../middlewares/au
 const db = require('../models');
 const User = db.User;
 
-
-
+const verifyToken = require('../middlewares/authMiddleware');
 
 // 이메일 중복 확인 (GET /api/auth/check-email)
 router.get('/check-email', authController.checkEmail);
@@ -30,7 +29,7 @@ router.get('/me', authMiddleware, async (req, res) => {
   try {
     // authMiddleware에서 req.user에 토큰 정보(id, email) 넣어줌
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'email', 'nickname', 'dateOfBirth']
+      attributes: ['user_id', 'email', 'nickname', 'birth', 'si', 'gungu']
     });
 
     if (!user) {
