@@ -8,13 +8,12 @@ const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const app = express();
 
-
 const looksRoutes = require('./routes/looks.js');
 
 const db = require('./models'); //db
 const lookPostRouter = require('./routes/lookPost.js')(db); // lookPost.js 라우터 가져오기
-const PORT = process.env.PORT || 3000;
 
+const PORT = process.env.PORT || 3000;
 
 const authRoutes = require('./routes/auth'); //라우트 연결
 
@@ -56,6 +55,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', mypageRoutes);
 app.use('/api/looks', looksRoutes);
 app.use('/api', lookPostRouter); // 게시글 업로드 라우터 연결
+
+/app.use('/api/users', mypageRoutes);
 
 
 // S3 사용 전 임시적으로 로컬 uploads 폴더를 정적 파일로 제공
