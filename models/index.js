@@ -29,10 +29,4 @@ Object.keys(db).forEach(modelName => {
     }
 });
 
-/* db.Post.associate(db);
-db.Image.associate(db); 
-db.User.associate(db);
-db.Like.associate(db);
-db.Weather.associate(db); */
-
 module.exports = db;
