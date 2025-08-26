@@ -1,24 +1,18 @@
 const axios = require('axios');
-const getXY = require('../utils/getXY'); // getXY 유틸리티 사용
+const getXY = require('../utils/getXY');
 
 const serviceKey = process.env.WEATHER_API_KEY;
 
 exports.getWeatherByCoordinates = async (lat, lon) => {
-    // 1. 위도와 경도로 가장 가까운 지역의 격자 좌표(nx, ny)를 찾습니다.
     const { nx, ny } = getXY(lat, lon);
 
-    // 2. 현재 날짜와 시간 설정
     const today = new Date();
     const year = today.getFullYear();
     const month = (today.getMonth() + 1).toString().padStart(2, '0');
     const day = today.getDate().toString().padStart(2, '0');
     const baseDate = `${year}${month}${day}`;
+    const baseTime = "0500";
 
-    // 3. API 호출에 사용할 기준 시간을 설정합니다. (단기예보 API 기준)
-    // 예시 코드로 05시만 사용했으나, 실제로는 모든 시간대별 기준 시간을 설정해야 합니다.
-    const baseTime = "0500"; 
-
-    // 4. 기상청 단기예보 API 호출
     const apiUrl = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst';
     const params = {
         serviceKey: serviceKey,
@@ -27,71 +21,86 @@ exports.getWeatherByCoordinates = async (lat, lon) => {
         dataType: 'JSON',
         base_date: baseDate,
         base_time: baseTime,
-        nx: nx,
-        ny: ny
+        nx,
+        ny
     };
 
     const response = await axios.get(apiUrl, { params });
     const items = response.data.response.body.items.item;
-    
+
     if (!items) {
         throw new Error("날씨 정보를 찾을 수 없습니다.");
     }
-    
-    // 5. 응답 데이터를 필요한 형태로 가공
+
+    // 응답 JSON을 한글 key로 변환
     const weatherData = {
-        temperature: null,
-        feels_like: null,
-        humidity: null,
-        precipitation_amount: null,
-        precipitation_probability: null,
-        wind_speed: null,
-        wind_direction: null,
-        weather_condition: null,
+        기온: null,
+        체감온도: null,
+        습도: null,
+        강수량: null,
+        강수확률: null,
+        풍속: null,
+        풍향: null,
+        하늘상태: null,
     };
 
     items.forEach(item => {
         switch (item.category) {
             case 'T1H': // 기온
-                weatherData.temperature = parseFloat(item.fcstValue);
+                weatherData.기온 = `${parseFloat(item.fcstValue)}도`;
                 break;
             case 'REH': // 습도
-                weatherData.humidity = parseInt(item.fcstValue);
+                weatherData.습도 = `${parseInt(item.fcstValue)}%`;
                 break;
             case 'RN1': // 강수량
-                weatherData.precipitation_amount = parseFloat(item.fcstValue);
+                weatherData.강수량 = `${parseFloat(item.fcstValue)}mm`;
                 break;
             case 'POP': // 강수 확률
-                weatherData.precipitation_probability = parseInt(item.fcstValue);
+                weatherData.강수확률 = `${parseInt(item.fcstValue)}%`;
                 break;
             case 'WSD': // 풍속
-                weatherData.wind_speed = parseFloat(item.fcstValue);
+                weatherData.풍속 = `${parseFloat(item.fcstValue)}m/s`;
                 break;
             case 'VEC': // 풍향
-                weatherData.wind_direction = parseInt(item.fcstValue);
+                const direction = getWindDirection(item.fcstValue);
+                weatherData.풍향 = `${direction}(${item.fcstValue}°)`;
                 break;
             case 'SKY': // 하늘 상태
-                weatherData.weather_condition = getSkyCondition(item.fcstValue);
+                weatherData.하늘상태 = getSkyCondition(item.fcstValue);
                 break;
         }
     });
 
-    // 6. 체감 온도 계산 (기온, 풍속, 습도 조합)
-    const temperature = weatherData.temperature;
-    const windSpeed = weatherData.wind_speed;
-    if (temperature !== null && windSpeed !== null) {
-        weatherData.feels_like = 13.12 + 0.6215 * temperature - 11.37 * Math.pow(windSpeed, 0.16) + 0.3965 * temperature * Math.pow(windSpeed, 0.16);
+    // 체감온도 계산 후 한글 key로 추가
+    const temp = parseFloat(weatherData.기온);
+    const wind = parseFloat(weatherData.풍속);
+    if (!isNaN(temp) && !isNaN(wind)) {
+        const feelsLike = 13.12 + 0.6215 * temp - 11.37 * Math.pow(wind, 0.16) + 0.3965 * temp * Math.pow(wind, 0.16);
+        weatherData.체감온도 = `${feelsLike.toFixed(1)}도`;
     }
-    
+
     return weatherData;
 };
 
-// 하늘 상태 코드를 문자열로 변환하는 함수
+// 하늘 상태 코드 변환
 const getSkyCondition = (code) => {
-    switch(code) {
-        case '1': return '맑음'; 
+    switch (code) {
+        case '1': return '맑음';
         case '3': return '구름 많음';
         case '4': return '흐림';
         default: return '알 수 없음';
     }
+};
+
+// 풍향 코드 → 한글 변환
+const getWindDirection = (degree) => {
+    const deg = parseInt(degree);
+    if (deg >= 337.5 || deg < 22.5) return "북풍";
+    if (deg >= 22.5 && deg < 67.5) return "북동풍";
+    if (deg >= 67.5 && deg < 112.5) return "동풍";
+    if (deg >= 112.5 && deg < 157.5) return "남동풍";
+    if (deg >= 157.5 && deg < 202.5) return "남풍";
+    if (deg >= 202.5 && deg < 247.5) return "남서풍";
+    if (deg >= 247.5 && deg < 292.5) return "서풍";
+    return "북서풍";
 };
