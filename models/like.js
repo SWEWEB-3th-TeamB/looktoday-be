@@ -8,22 +8,22 @@ class Like extends Sequelize.Model {
                 autoIncrement: true,
                 primaryKey: true,
             },
-            // user_id: { // User를 참조하는 외래 키
-            //     type: Sequelize.INTEGER,
-            //     allowNull: false,
-            //     references: {
-            //         model: 'users',
-            //         key: 'user_id',
-            //     }
-            // },
-            // looktoday_id: { // Post를 참조하는 외래 키
-            //     type: Sequelize.INTEGER,
-            //     allowNull: false,
-            //     references: {
-            //         model: 'posts',
-            //         key: 'looktoday_id',
-            //     }
-            // }
+            user_id: { // User를 참조하는 외래 키
+                type: Sequelize.INTEGER,
+                allowNull: false,
+                // references: {
+                //     model: 'users',
+                //     key: 'user_id',
+                // }
+            },
+            looktoday_id: { // Post를 참조하는 외래 키
+                type: Sequelize.INTEGER,
+                allowNull: false,
+                // references: {
+                //     model: 'posts',
+                //     key: 'looktoday_id',
+                // }
+            }
 
         }, {
             sequelize,
