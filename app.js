@@ -23,16 +23,22 @@ const mypageRoutes = require('./routes/mypage');
 app.use(express.json());
 
 // cors 설정
-app.use(cors()); // 도메인 구매 후 변경
+app.use(cors({
+  origin: ['https://looktoday.kr', "https://www.looktoday.kr"],
+  credentials: true, // 쿠키 전송 허용
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Authorization'],
+}));
 app.use(morgan('dev'));
 app.use('/',express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: false}));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
 
-app.get('/', (req, res) => {
-    res.send('Hello World');
-});
+// app.get('/', (req, res) => {
+//     res.send('Hello World');
+// });
 
 // app.listen(app.get('port'),()=>{
 //     console.log(app.get('port'),'번 포트에서 대기 중');
@@ -58,15 +64,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 db.sequelize.authenticate()
   .then(async () => {
     console.log('DB 연결 성공');
-
-    // 테이블 생성 순서 주의
-    // User -> Weather -> Post -> Like -> Image
-    /* await db.User.sync({ alter: true }); // alter : true 옵션으로 db 업데이트
-    await db.Weather.sync({ alter: true });
-    await db.Post.sync({ alter: true });
-
-    await db.Like.sync({ alter: true });
-    await db.Image.sync({ alter: true }); */
 
     await db.sequelize.sync({ alter: true });
 
