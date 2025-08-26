@@ -17,16 +17,27 @@ const PORT = process.env.PORT || 3000;
 
 const authRoutes = require('./routes/auth'); //라우트 연결
 
+const mypageRoutes = require('./routes/mypage');
+
 app.use(express.json());
+
+// cors 설정
+app.use(cors({
+  origin: ['https://looktoday.kr', "https://www.looktoday.kr"],
+  credentials: true, // 쿠키 전송 허용
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Authorization'],
+}));
 app.use(morgan('dev'));
 app.use('/',express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: false}));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
 
-app.get('/', (req, res) => {
-    res.send('Hello World');
-});
+// app.get('/', (req, res) => {
+//     res.send('Hello World');
+// });
 
 // app.listen(app.get('port'),()=>{
 //     console.log(app.get('port'),'번 포트에서 대기 중');
@@ -41,22 +52,30 @@ app.use('/api/weather', weatherRouter);
 //라우트 연결 (/api/auth로 들어오는 요청 처리)
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', mypageRoutes);
 app.use('/api/looks', looksRoutes);
 app.use('/api', lookPostRouter); // 게시글 업로드 라우터 연결
 
-//app.use('/api/users', mypageRoutes);
+/app.use('/api/users', mypageRoutes);
+
 
 // S3 사용 전 임시적으로 로컬 uploads 폴더를 정적 파일로 제공
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); 
 
-db.sequelize.sync()
-  .then(() => {
-    console.log('DB 연결 및 테이블 생성 완료');
+db.sequelize.authenticate()
+  .then(async () => {
+    console.log('DB 연결 성공');
+
+    await db.sequelize.sync({ alter: true });
+
+    console.log('테이블 생성 및 업데이트 완료');
+
     // 서버 시작 코드 위치
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`${PORT}번 포트에서 대기 중`);
     });
   })
+
   .catch((err) => {
     console.error('DB 연결 실패:', err);
   });

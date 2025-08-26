@@ -38,7 +38,15 @@ class Image extends Sequelize.Model {
             looktoday_id: {
                 type: Sequelize.INTEGER,
                 allowNull: true, // POST 생성 후 id 업데이트하므로 null값 허용
-                defaultValue: null
+
+                defaultValue: null,
+                 references: { // 참조 
+                    model: 'posts',
+                    key: 'looktoday_id'
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE' 
+
             }
 
 
@@ -51,8 +59,8 @@ class Image extends Sequelize.Model {
             modelName: 'Image',
             tableName: 'images', //DB 테이블 이름
             paranoid: true,
-            charset: 'utf8',
-            collate: 'utf8_general_ci',
+            charset: 'utf8mb4',
+            collate: 'utf8mb4_general_ci',
         });
     }
     static associate(db) {
