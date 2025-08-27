@@ -7,7 +7,9 @@ const cors = require('cors');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 
-const app = express(); // ✅ app을 먼저 선언해야 함
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
+const app = express();
 
 // --- DB 연결 ---
 const db = require('./models'); // models/index.js에서 모든 모델 관리
@@ -40,8 +42,46 @@ app.use('/', express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
+// --- Swagger 설정 추가 ---
+const options = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'LookToday API',
+      version: '1.0.0',
+      description: 'LookToday의 API 문서입니다.',
+    },
+    // 인증을 위한 Authorize 버튼 추가
+    components: {
+      securitySchemes: {
+        BearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+  },
+  apis: ['./routes/*.js'], // API 주석이 담긴 파일들의 경로
+};
+const specs = swaggerJsdoc(options);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+
+// app.get('/', (req, res) => {
+//     res.send('Hello World');
+// });
+
+// app.listen(app.get('port'),()=>{
+//     console.log(app.get('port'),'번 포트에서 대기 중');
+// });
+
+// routes 폴더에서 weather.js 파일을 불러옵니다.
+const weatherRouter = require('./routes/weather');
+
+// app.use(...) 부분에 아래 코드를 추가하여 라우터를 연결합니다.
+// 이제 /api/weather 경로로 들어오는 모든 요청은 weatherRouter가 처리합니다.
+
 // --- 라우터 등록 ---
-// 기존 단기예보 기반 API
 app.use('/api/weather', weatherRouter);
 
 // 새로 만든 초단기실황 기반 API
