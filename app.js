@@ -6,12 +6,15 @@ const path = require('path');
 const cors = require('cors');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
 const app = express();
 
 const looksRoutes = require('./routes/looks.js');
 
 const db = require('./models'); //db
 const lookPostRouter = require('./routes/lookPost.js')(db); // lookPost.js 라우터 가져오기
+
 
 const PORT = process.env.PORT || 3000;
 
@@ -33,6 +36,30 @@ app.use(morgan('dev'));
 app.use('/',express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: false}));
 app.use(cookieParser(process.env.COOKIE_SECRET));
+
+const options = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'LookToday API',
+      version: '1.0.0',
+      description: 'LookToday의 API 문서입니다.',
+    },
+    // 인증을 위한 Authorize 버튼 추가
+    components: {
+      securitySchemes: {
+        BearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+  },
+  apis: ['./routes/*.js'], // API 주석이 담긴 파일들의 경로
+};
+const specs = swaggerJsdoc(options);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 
 // app.get('/', (req, res) => {
