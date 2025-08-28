@@ -41,44 +41,43 @@ app.use('/', express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
-// --- Swagger 설정 추가 ---
-const options = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'LookToday API',
-      version: '1.0.0',
-      description: 'LookToday의 API 문서입니다.',
-    },
-    // 인증을 위한 Authorize 버튼 추가
-    components: {
-      securitySchemes: {
-        BearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
+// --- Swagger (문서 파싱 오류로 서버 죽지 않게 가드) ---
+if (process.env.SWAGGER !== 'off') {
+  try {
+    const swaggerJsdoc = require('swagger-jsdoc');
+    const swaggerUi = require('swagger-ui-express');
+
+    const options = {
+      definition: {
+        openapi: '3.0.0',
+        info: {
+          title: 'LookToday API',
+          version: '1.0.0',
+          description: 'LookToday의 API 문서입니다.',
+        },
+        components: {
+          securitySchemes: {
+            BearerAuth: {
+              type: 'http',
+              scheme: 'bearer',
+              bearerFormat: 'JWT',
+            },
+          },
         },
       },
-    },
-  },
-  apis: ['./routes/*.js'], // API 주석이 담긴 파일들의 경로
-};
-const specs = swaggerJsdoc(options);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+      // looks.js 주석 YAML이 깨져 있어 파싱 에러가 나므로 일단 제외
+      apis: ['./routes/*.js', '!./routes/looks.js'],
+    };
 
-// app.get('/', (req, res) => {
-//     res.send('Hello World');
-// });
-
-// app.listen(app.get('port'),()=>{
-//     console.log(app.get('port'),'번 포트에서 대기 중');
-// });
-
-// routes 폴더에서 weather.js 파일을 불러옵니다.
-const weatherRouter = require('./routes/weather');
-
-// app.use(...) 부분에 아래 코드를 추가하여 라우터를 연결합니다.
-// 이제 /api/weather 경로로 들어오는 모든 요청은 weatherRouter가 처리합니다.
+    const specs = swaggerJsdoc(options);
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+    console.log('[swagger] /api-docs 활성화 (looks.js 제외)');
+  } catch (e) {
+    console.warn('[swagger] 비활성화(초기화 실패):', e.message);
+  }
+} else {
+  console.log('[swagger] 환경변수로 비활성화(SWAGGER=off)');
+}
 
 // --- Routes ---
 app.use('/api/weather', weatherRouter);
@@ -95,14 +94,15 @@ async function ensureUltraNowcastSchema() {
   const qi = db.sequelize.getQueryInterface();
   const Sequelize = db.Sequelize;
 
+  // 테이블 스키마 읽기 (없으면 패스)
   let table = {};
   try {
     table = await qi.describeTable('ultra_nowcast');
   } catch {
-    return; // 테이블은 sync 이후에 생김
+    return;
   }
 
-  // 1) si / gungu 컬럼 추가
+  // 1) si / gungu 컬럼(없으면 추가)  — NOT NULL 강제는 상황 따라 선택
   if (!table.si) {
     await qi.addColumn('ultra_nowcast', 'si', {
       type: Sequelize.STRING(50),
@@ -120,54 +120,33 @@ async function ensureUltraNowcastSchema() {
     console.log('[bootstrap] ultra_nowcast.gungu 컬럼 추가');
   }
 
-  // 2) category_name(한글 라벨) 컬럼 추가
-  if (!table.category_name) {
-    await qi.addColumn('ultra_nowcast', 'category_name', {
-      type: Sequelize.STRING(20),
-      allowNull: true,
-      after: 'category',
-    });
-    console.log('[bootstrap] ultra_nowcast.category_name 컬럼 추가');
+  // 2) (중요) 더 이상 category / category_name / obsrValue 사용 안 함 → 관련 조작 제거
+  //    예전 코드: category_name 추가/백필, category 기반 인덱스 생성 등은 모두 스킵
+
+  // 3) 가로형 업서트에 맞는 유니크 인덱스 보장 (si,gungu,baseDate,baseTime,nx,ny)
+  try {
+    // MySQL은 IF NOT EXISTS 미지원 → 존재여부 확인 후 생성
+    const [rows] = await db.sequelize.query(`
+      SELECT 1
+      FROM INFORMATION_SCHEMA.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'ultra_nowcast'
+        AND INDEX_NAME = 'uk_nowcast_key'
+      LIMIT 1
+    `);
+    if (!rows.length) {
+      await qi.addIndex('ultra_nowcast', {
+        name: 'uk_nowcast_key',
+        unique: true,
+        fields: ['si', 'gungu', 'baseDate', 'baseTime', 'nx', 'ny'],
+      });
+      console.log('[bootstrap] ultra_nowcast uk_nowcast_key 인덱스 추가');
+    }
+  } catch (e) {
+    console.warn('[bootstrap] uk_nowcast_key 인덱스 확인/추가 실패:', e.message);
   }
 
-  // 3) 인덱스 (이미 있으면 무시)
-  try {
-    await qi.addIndex('ultra_nowcast', {
-      name: 'idx_ultra_si_gungu',
-      fields: ['si', 'gungu'],
-    });
-    console.log('[bootstrap] ultra_nowcast idx_ultra_si_gungu 인덱스 추가');
-  } catch {}
-  try {
-    await qi.addIndex('ultra_nowcast', {
-      name: 'uniq_ultra_slot',
-      unique: true,
-      fields: ['baseDate', 'baseTime', 'nx', 'ny', 'category'], // category=영문코드 유지
-    });
-    console.log('[bootstrap] ultra_nowcast uniq_ultra_slot 인덱스 추가');
-  } catch {}
-
-  // 4) 기존 데이터: 영문 category -> category_name 한글 백필
-  const backfillLabelSql = `
-    UPDATE ultra_nowcast
-       SET category_name = CASE category
-         WHEN 'T1H' THEN '기온'
-         WHEN 'REH' THEN '습도'
-         WHEN 'PTY' THEN '강수형태'
-         WHEN 'RN1' THEN '1시간 강수량'
-         WHEN 'WSD' THEN '풍속'
-         WHEN 'VEC' THEN '풍향'
-         WHEN 'UUU' THEN '동서바람성분'
-         WHEN 'VVV' THEN '남북바람성분'
-         ELSE category_name
-       END
-     WHERE category IN ('T1H','REH','PTY','RN1','WSD','VEC','UUU','VVV')
-       AND (category_name IS NULL OR category_name = '');
-  `;
-  await db.sequelize.query(backfillLabelSql);
-  console.log('[bootstrap] ultra_nowcast category_name 백필 완료');
-
-  // 5) 기존 데이터: si/gungu NULL 자동 보정 (locationMap 기반)
+  // 4) (선택) si/gungu NULL 자동 보정 — locationMap 기준 (있을 때만)
   try {
     const locationMap = require('./data/locationMap');
     let total = 0;
@@ -178,11 +157,8 @@ async function ensureUltraNowcastSchema() {
              SET si = :si, gungu = :gungu
            WHERE nx = :nx AND ny = :ny
              AND (si IS NULL OR gungu IS NULL)`,
-          {
-            replacements: { si, gungu: d.district, nx: d.nx, ny: d.ny },
-          }
+          { replacements: { si, gungu: d.district || '', nx: d.nx, ny: d.ny } }
         );
-        // mysql2 returns OkPacket with affectedRows
         total += res?.affectedRows || 0;
       }
     }

@@ -52,7 +52,7 @@ function normalizeValue(cat, v) {
   return toNumberSafe(v);
 }
 
-async function fetchAndSaveUltraNowcastByXY({ nx, ny, now = new Date() }) {
+async function fetchAndSaveUltraNowcastByXY({ nx, ny, si: siOverride, gungu: gunguOverride, now = new Date() }) {
   const { baseDate, baseTime } = getBaseDateTimeForUltra(now);
   const params = buildParams({ baseDate, baseTime, nx, ny });
 
@@ -75,15 +75,21 @@ async function fetchAndSaveUltraNowcastByXY({ nx, ny, now = new Date() }) {
     }
 
     // === 가로형 1행 업서트 준비 ===
-    const { si, gungu } = getSiGunguByXY(nx, ny);
+    const mapped = getSiGunguByXY(nx, ny);
+
+    // 🔹 null 방지: 세종처럼 gungu 없는 지역도 빈 문자열로 처리
+    const si = siOverride ?? mapped.si ?? '';
+    const gungu = gunguOverride ?? mapped.gungu ?? '';
+
     const row = {
       baseDate: String(items[0].baseDate || baseDate),
       baseTime: String(items[0].baseTime || baseTime).padStart(4, '0'),
       nx: Number(items[0].nx ?? nx),
       ny: Number(items[0].ny ?? ny),
-      si: si || null,
-      gungu: gungu || null,
-      tmp: null, reh: null, wsd: null, vec: null, uuu: null, vvv: null, pty: null, pcp: null, lgt: null,
+      si,                        // 항상 문자열
+      gungu,                     // 항상 문자열
+      tmp: null, reh: null, wsd: null, vec: null,
+      uuu: null, vvv: null, pty: null, pcp: null, lgt: null,
     };
 
     for (const it of items) {
@@ -97,7 +103,15 @@ async function fetchAndSaveUltraNowcastByXY({ nx, ny, now = new Date() }) {
     // 키 충돌 시 업데이트 (모델에 unique index 필요)
     await UltraNowcast.upsert(row);
 
-    console.log('[UltraNowcast:upserted]', { baseDate: row.baseDate, baseTime: row.baseTime, nx: row.nx, ny: row.ny, si: row.si, gungu: row.gungu });
+    console.log('[UltraNowcast:upserted]', {
+      baseDate: row.baseDate,
+      baseTime: row.baseTime,
+      nx: row.nx,
+      ny: row.ny,
+      si: row.si,
+      gungu: row.gungu
+    });
+
     return 1;
   } catch (err) {
     console.error('[UltraNowcast:error]', err?.response?.data || err.message);
