@@ -15,18 +15,20 @@ class Image extends Sequelize.Model {
                 type: Sequelize.STRING(1000),
                 allowNull: false
             },
+
             // 룩투데이 식별번호 (외래키)
             looktoday_id: {
                 type: Sequelize.INTEGER,
                 allowNull: true, // POST 생성 후 id 업데이트하므로 null값 허용
                 defaultValue: null,
-                /* references: { // 참조 
-                    model: 'posts',
+                references: { // 참조 
+                    model: 'Posts',
                     key: 'looktoday_id'
                 },
                 onUpdate: 'CASCADE',
-                onDelete: 'CASCADE' */
+                onDelete: 'CASCADE'
             }
+
         }, {
             sequelize,
             timestamps: true,

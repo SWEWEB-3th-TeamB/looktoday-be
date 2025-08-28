@@ -1,4 +1,3 @@
-// services/weatherSaver.js
 // Weather 모델을 늦게(require 시점) 바인딩해서 undefined/upsert 에러 방지
 
 function round1(n) {
@@ -14,7 +13,6 @@ function round1(n) {
   }
   
   exports.saveSnapshot = async (payload) => {
-    // ★ 여기서 '늦게' models를 불러온다 (로드 순서/순환의존 이슈 회피)
     const db = require('../models');
     const Weather = db?.Weather || db?.sequelize?.models?.Weather;
   

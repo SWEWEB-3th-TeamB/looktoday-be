@@ -32,8 +32,8 @@ class Post extends Sequelize.Model {
             },
             // api 통해서 받아올 수 있는 날씨 예보 시간
             hour: { // 우선 문자열로 설정, 나중에 숫자로 바꿀 수도
-                type: Sequelize.ENUM('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', 
-                    '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'),
+                type: Sequelize.ENUM('0','1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23','24'),
+
                 allowNull: false
             },
             //좋아요 수
@@ -94,7 +94,7 @@ class Post extends Sequelize.Model {
     }
 
     static associate(db) {
-        // Post 모델은 User 모델에 속해있음
+        // Post 모델은 User 모델에 속해있음 // eunseo 이미지 여러장 붙일 계획이면 hasMany 고려
         db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'user_id' });
         db.Post.hasOne(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
         db.Post.belongsTo(db.Weather, { foreignKey: 'weather_id', targetKey: 'id' });
