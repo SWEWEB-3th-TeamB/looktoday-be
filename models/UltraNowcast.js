@@ -1,24 +1,31 @@
-// models/UltraNowcast.js
 module.exports = (sequelize, DataTypes) => {
-    const UltraNowcast = sequelize.define('UltraNowcast', {
-      id: { type: DataTypes.BIGINT.UNSIGNED, primaryKey: true, autoIncrement: true },
-      baseDate: { type: DataTypes.STRING(8), allowNull: false },   // YYYYMMDD
-      baseTime: { type: DataTypes.STRING(4), allowNull: false },   // HHmm (정시: "1300")
-      nx: { type: DataTypes.INTEGER, allowNull: false },
-      ny: { type: DataTypes.INTEGER, allowNull: false },
-      category: { type: DataTypes.STRING(3), allowNull: false },   // RN1,T1H,UUU, ...
-      obsrValue: { type: DataTypes.STRING(16), allowNull: false }, // 실수/정수 모두 문자열로 받아 저장
-    }, {
-      tableName: 'ultra_nowcast',
-      indexes: [
-        {
-          unique: true,
-          fields: ['baseDate','baseTime','nx','ny','category']
-        },
-        { fields: ['baseDate','baseTime'] },
-      ]
-    });
-  
-    return UltraNowcast;
-  };
-  
+  const UltraNowcast = sequelize.define('ultra_nowcast', {
+    id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
+
+    baseDate: { type: DataTypes.STRING(8), allowNull: false },
+    baseTime: { type: DataTypes.STRING(4), allowNull: false },
+    nx: { type: DataTypes.INTEGER, allowNull: false },
+    ny: { type: DataTypes.INTEGER, allowNull: false },
+    si: { type: DataTypes.STRING(50), allowNull: false },
+    gungu: { type: DataTypes.STRING(50), allowNull: false },
+
+    tmp: { type: DataTypes.FLOAT },
+    reh: { type: DataTypes.FLOAT },
+    wsd: { type: DataTypes.FLOAT },
+    vec: { type: DataTypes.FLOAT },
+    uuu: { type: DataTypes.FLOAT },
+    vvv: { type: DataTypes.FLOAT },
+    pty: { type: DataTypes.STRING(2) },
+    pcp: { type: DataTypes.STRING(16) },
+    lgt: { type: DataTypes.FLOAT },
+  }, {
+    tableName: 'ultra_nowcast',
+    timestamps: false,
+    indexes: [{
+      unique: true,
+      name: 'uk_nowcast_key',
+      fields: ['si', 'gungu', 'baseDate', 'baseTime', 'nx', 'ny'],
+    }],
+  });
+  return UltraNowcast;
+};
