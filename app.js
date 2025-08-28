@@ -7,28 +7,27 @@ const cors = require('cors');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 
-const swaggerUi = require('swagger-ui-express');
-const swaggerJsdoc = require('swagger-jsdoc');
 const app = express();
 
-// --- DB 연결 ---
-const db = require('./models'); // models/index.js에서 모든 모델 관리
+// --- DB ---
+const db = require('./models');
 
-// --- 라우터 임포트 ---
+// --- Routers ---
 const looksRoutes = require('./routes/looks.js');
 const lookPostRouter = require('./routes/lookPost.js')(db);
 const authRoutes = require('./routes/auth');
 const mypageRoutes = require('./routes/mypage');
 const weatherRouter = require('./routes/weather');
-const weatherNowRoutes = require('./routes/weatherNow'); // ✅ 새로 만든 초단기실황 API
+const weatherNowRoutes = require('./routes/weatherNow');
+const sunRouter = require('./routes/sun');
 
-// --- 크론 스케줄러 임포트 ---
+// --- Cron ---
 const weatherCron = require('./services/weatherCron');
 
-// --- 환경 변수 ---
+// --- ENV ---
 const PORT = process.env.PORT || 3000;
 
-// --- 미들웨어 설정 ---
+// --- Middlewares ---
 app.use(express.json());
 app.use(cors({
   origin: ['https://looktoday.kr', 'https://www.looktoday.kr'],
@@ -81,31 +80,127 @@ const weatherRouter = require('./routes/weather');
 // app.use(...) 부분에 아래 코드를 추가하여 라우터를 연결합니다.
 // 이제 /api/weather 경로로 들어오는 모든 요청은 weatherRouter가 처리합니다.
 
-// --- 라우터 등록 ---
+// --- Routes ---
 app.use('/api/weather', weatherRouter);
-
-// 새로 만든 초단기실황 기반 API
 app.use('/api/weather', weatherNowRoutes);
-
-// 사용자 인증 및 마이페이지
 app.use('/api/auth', authRoutes);
 app.use('/api/users', mypageRoutes);
-
-// LOOKS 관련 API
 app.use('/api/looks', looksRoutes);
 app.use('/api', lookPostRouter);
-
-// S3 업로드 대신 로컬 uploads 폴더 제공
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/sun', sunRouter);
 
-// --- DB 연결 및 서버 시작 ---
+// --- 부팅 시 스키마/데이터 보정 ---
+async function ensureUltraNowcastSchema() {
+  const qi = db.sequelize.getQueryInterface();
+  const Sequelize = db.Sequelize;
+
+  let table = {};
+  try {
+    table = await qi.describeTable('ultra_nowcast');
+  } catch {
+    return; // 테이블은 sync 이후에 생김
+  }
+
+  // 1) si / gungu 컬럼 추가
+  if (!table.si) {
+    await qi.addColumn('ultra_nowcast', 'si', {
+      type: Sequelize.STRING(50),
+      allowNull: true,
+      after: 'ny',
+    });
+    console.log('[bootstrap] ultra_nowcast.si 컬럼 추가');
+  }
+  if (!table.gungu) {
+    await qi.addColumn('ultra_nowcast', 'gungu', {
+      type: Sequelize.STRING(50),
+      allowNull: true,
+      after: 'si',
+    });
+    console.log('[bootstrap] ultra_nowcast.gungu 컬럼 추가');
+  }
+
+  // 2) category_name(한글 라벨) 컬럼 추가
+  if (!table.category_name) {
+    await qi.addColumn('ultra_nowcast', 'category_name', {
+      type: Sequelize.STRING(20),
+      allowNull: true,
+      after: 'category',
+    });
+    console.log('[bootstrap] ultra_nowcast.category_name 컬럼 추가');
+  }
+
+  // 3) 인덱스 (이미 있으면 무시)
+  try {
+    await qi.addIndex('ultra_nowcast', {
+      name: 'idx_ultra_si_gungu',
+      fields: ['si', 'gungu'],
+    });
+    console.log('[bootstrap] ultra_nowcast idx_ultra_si_gungu 인덱스 추가');
+  } catch {}
+  try {
+    await qi.addIndex('ultra_nowcast', {
+      name: 'uniq_ultra_slot',
+      unique: true,
+      fields: ['baseDate', 'baseTime', 'nx', 'ny', 'category'], // category=영문코드 유지
+    });
+    console.log('[bootstrap] ultra_nowcast uniq_ultra_slot 인덱스 추가');
+  } catch {}
+
+  // 4) 기존 데이터: 영문 category -> category_name 한글 백필
+  const backfillLabelSql = `
+    UPDATE ultra_nowcast
+       SET category_name = CASE category
+         WHEN 'T1H' THEN '기온'
+         WHEN 'REH' THEN '습도'
+         WHEN 'PTY' THEN '강수형태'
+         WHEN 'RN1' THEN '1시간 강수량'
+         WHEN 'WSD' THEN '풍속'
+         WHEN 'VEC' THEN '풍향'
+         WHEN 'UUU' THEN '동서바람성분'
+         WHEN 'VVV' THEN '남북바람성분'
+         ELSE category_name
+       END
+     WHERE category IN ('T1H','REH','PTY','RN1','WSD','VEC','UUU','VVV')
+       AND (category_name IS NULL OR category_name = '');
+  `;
+  await db.sequelize.query(backfillLabelSql);
+  console.log('[bootstrap] ultra_nowcast category_name 백필 완료');
+
+  // 5) 기존 데이터: si/gungu NULL 자동 보정 (locationMap 기반)
+  try {
+    const locationMap = require('./data/locationMap');
+    let total = 0;
+    for (const si of Object.keys(locationMap)) {
+      for (const d of locationMap[si]) {
+        const [res] = await db.sequelize.query(
+          `UPDATE ultra_nowcast
+             SET si = :si, gungu = :gungu
+           WHERE nx = :nx AND ny = :ny
+             AND (si IS NULL OR gungu IS NULL)`,
+          {
+            replacements: { si, gungu: d.district, nx: d.nx, ny: d.ny },
+          }
+        );
+        // mysql2 returns OkPacket with affectedRows
+        total += res?.affectedRows || 0;
+      }
+    }
+    if (total) console.log(`[bootstrap] ultra_nowcast si/gungu NULL 자동 보정 완료 (+${total} rows)`);
+  } catch (e) {
+    console.warn('[bootstrap] si/gungu 자동 보정 스킵:', e.message);
+  }
+}
+
+// --- Start ---
 db.sequelize.authenticate()
   .then(async () => {
     console.log('DB 연결 성공');
-    await db.sequelize.sync({ alter: true });
+    await db.sequelize.sync(); // alter:true 지양
     console.log('테이블 생성 및 업데이트 완료');
 
-    // 크론 스케줄러 시작 (환경 변수에서 on일 때만)
+    await ensureUltraNowcastSchema();
+
     weatherCron.start();
 
     app.listen(PORT, '0.0.0.0', () => {

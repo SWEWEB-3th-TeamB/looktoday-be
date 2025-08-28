@@ -33,8 +33,12 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "sequelize": "^6.37.7",
+<<<<<<< HEAD
+    "suncalc": "^1.9.0"
+=======
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
+>>>>>>> f64961f86409974a23ce92f6c8e08af1722328d7
   },
   "devDependencies": {
     "nodemon": "^3.1.10",
