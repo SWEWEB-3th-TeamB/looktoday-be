@@ -23,7 +23,7 @@ const sunRouter = require('./routes/sun');
 
 // --- Cron ---
 const weatherCron = require('./services/weatherCron');
-
+const postWeatherCron = require('./services/postweatherCron');
 // --- ENV ---
 const PORT = process.env.PORT || 3000;
 
@@ -178,6 +178,7 @@ db.sequelize.authenticate()
     await ensureUltraNowcastSchema();
 
     weatherCron.start();
+    postWeatherCron.start();
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`${PORT}번 포트에서 대기 중`);
