@@ -7,10 +7,12 @@ const path = require('path');
 const AWS = require('aws-sdk');
 //const fs = require('fs');
 const { isLoggedIn } = require('../middlewares');
+const UltraNowcast = require('../models/UltraNowcast');
 
 module.exports = (db) => {
   const router = express.Router();
-  const { Post, Image, sequelize, Sequelize: { Op } } = db;
+  const { Post, Image, sequelize, Sequelize } = db;
+  const { Op } = Sequelize;
 
   // AWS S3 설정
   AWS.config.update({
@@ -58,6 +60,25 @@ module.exports = (db) => {
     }
   }; 
 
+  // 입력받은 년월일시 객체 변환 함수
+  function toBaseDatetime(dateStr, hourStr) {
+    const hourNum = Number(hourStr);
+    const [y, m, d] = String(dateStr).split('-').map(Number);
+    const dt = new Date(y, m-1, d, 0, 0, 0);
+    dt.setHours(hourNum);
+    const Y = dt.getFullYear();
+    const M = String(dt.getMonth() + 1).padStart(2, '0');
+    const D = String(dt.getDate()).padStart(2, '0');
+    const H = String(dt.getHours()).padStart(2, '0');
+    return { baseDate: `${Y}${M}${D}`, baseTime: `${H}00` };
+  }
+
+  // UltraNowCast 조회 함수
+  async function findWeather(si, gungu, date, hour) {
+    const { baseDate, baseTime } = toBaseDatetime(date, hour);
+    return UltraNowcast.findOne({ where: { si, gungu, baseDate, baseTime } });
+  }
+
   // POST /api/lookPost — 이미지 + 게시글 동시 업로드
   router.post('/lookPost', isLoggedIn, upload.single('image'), async (req, res) => {
     console.log('--- Request Body ---');  // 확인용 로그 
@@ -70,7 +91,6 @@ module.exports = (db) => {
 
     try {
       const {
-        //weather,
         date,
         hour,
         isPublic,
@@ -93,7 +113,7 @@ module.exports = (db) => {
       if (
         !req.file || !comment || !apparent_temp || !apparent_humidity ||
         (isPublic !== 'true' && isPublic !== 'false') || !si || !gungu ||
-        !date || !hour // || !weather
+        !date || !hour
       ) {
         return res.status(400).json({
           success: false,
@@ -108,6 +128,7 @@ module.exports = (db) => {
 
       const user_id = req.user.user_id; // 로그인 사용자 ID
       const previousCount = await Post.count({ where: { user_id } }); // 지금까지 쓴 게시글 수 확인
+      const weatherRow = await findWeather(si, gungu, date, hour); // 날씨 조회 시도
 
       const newPost = await Post.create({
         user_id,
@@ -116,11 +137,11 @@ module.exports = (db) => {
         gungu,
         apparent_temp,
         apparent_humidity,
-        //weather,
         isPublic: isPublic === 'true', // 문자열 → boolean 변환
         comment,
         date,
-        hour
+        hour,
+        weather_id: weatherRow ? weatherRow.id : null // 없으면 null
       });
 
       // 이미지와 포스트 연결
@@ -137,7 +158,7 @@ module.exports = (db) => {
       console.error(error);
       return res.status(500).json({
         success: false,
-        message: "서버 오류로 인해 업로드에 실패했습니다."
+        message: error.message || "서버 오류로 인해 업로드에 실패했습니다."
       });
     }
   });
@@ -155,7 +176,6 @@ module.exports = (db) => {
         gungu,
         date,
         hour,
-        //weather
     } = req.body;
 
     // 코멘트 길이 검사
@@ -193,16 +213,19 @@ module.exports = (db) => {
       }
     }
 
+    const weatherRow = await findWeather(
+      si ?? post.si, gungu ?? post.gungu, date ?? post.date, hour ?? post.hour); // 날씨 조회 시도
+
     await post.update({ // 업데이트
       si,
       gungu,
       apparent_temp,
       apparent_humidity,
-      //weather,
-      isPublic: isPublic === 'true',
+      isPublic: isPublic !== undefined ? (isPublic === 'true') : post.isPublic,
       comment,
       date,
-      hour
+      hour,
+      weather_id: weatherRow ? weatherRow.id : null // 없으면 null
     });
 
     return res.status(200).json({
@@ -214,7 +237,7 @@ module.exports = (db) => {
       console.error(error);
       return res.status(500).json({
         success: false,
-        message: "서버 에러가 발생했습니다."
+        message: error.message || "서버 에러가 발생했습니다."
       });
     }
   });
@@ -245,12 +268,9 @@ module.exports = (db) => {
       }
 
       const deletedPostCount = post.post_count;
-
-      // 이미지와 게시물 삭제
       const images = await Image.findAll({ where: { looktoday_id }, transaction: t });
-      for (const image of images) {
-        await deleteFile(image.imageUrl); // S3에 있는 실제 파일 삭제
-      }
+      
+      // DB 삭제 -> commit -> S3 삭제 
       await Image.destroy({ where: { looktoday_id }, transaction: t });
       await Post.destroy({ where: { looktoday_id }, transaction: t });
 
@@ -268,17 +288,21 @@ module.exports = (db) => {
 
       await t.commit(); // 트랜잭션 커밋
 
+      for ( const image of images) {
+        await deleteFile(image.imageUrl); // commit 후 S3 파일 삭제
+      }
+
       return res.status(200).json({
         success: true,
         message: `게시물 ${ looktoday_id }이 성공적으로 삭제되었습니다.`
       });
 
     } catch (error) {
-      await t.rollback(); // 트랜잭션 롤백
+      if (t) await t.rollback(); // 트랜잭션 롤백
       console.error(error);
       return res.status(500).json({
         success: false,
-        message: "서버 에러가 발생했습니다."
+        message: error.message || "서버 에러가 발생했습니다."
       });
     }
   });
