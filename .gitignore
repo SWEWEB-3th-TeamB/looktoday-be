@@ -1,8 +1,9 @@
-node_modules/
+# Dependencies
+/node_modules
 
+# Environment variables
 .env
-uploads/
 
 looktoday-aws-key.pem
-
 ecosystem.config.js
+
