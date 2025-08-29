@@ -23,7 +23,7 @@ const sunRouter = require('./routes/sun');
 
 // --- Cron ---
 const weatherCron = require('./services/weatherCron');
-
+const postWeatherCron = require('./services/postweatherCron');
 // --- ENV ---
 const PORT = process.env.PORT || 3000;
 
@@ -172,12 +172,13 @@ async function ensureUltraNowcastSchema() {
 db.sequelize.authenticate()
   .then(async () => {
     console.log('DB 연결 성공');
-    await db.sequelize.sync(); // alter:true 지양
-    console.log('테이블 생성 및 업데이트 완료');
+    //await db.sequelize.sync({ alter: true });
+    //console.log('테이블 생성 및 업데이트 완료');
 
     await ensureUltraNowcastSchema();
 
     weatherCron.start();
+    postWeatherCron.start();
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`${PORT}번 포트에서 대기 중`);
