@@ -1,4 +1,4 @@
-const Sequelize = require('sequelize');
+const { Sequelize, DataTypes } = require('sequelize');
 
 class Post extends Sequelize.Model {
     static initiate(sequelize) {
@@ -52,6 +52,11 @@ class Post extends Sequelize.Model {
                 type: Sequelize.STRING(20),
                 allowNull: true,
             },
+            // 온도 
+            temperature: {
+                 type: DataTypes.FLOAT,
+                allowNull: true,
+            },
             // 체감온도
             apparent_temp: {
                 type: Sequelize.ENUM('무더워요', '더워요', '따뜻해요', '시원해요', '쌀쌀해요', '추워요'),
@@ -97,7 +102,7 @@ class Post extends Sequelize.Model {
         // Post 모델은 User 모델에 속해있음 // eunseo 이미지 여러장 붙일 계획이면 hasMany 고려
         db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'user_id' });
         db.Post.hasOne(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
-        db.Post.belongsTo(db.Weather, { foreignKey: 'weather_id', targetKey: 'id' });
+        db.Post.belongsTo(db.Weather, { foreignKey: 'weather_id', targetKey: 'id', as: 'weatherInfo' });
         db.Post.hasOne(db.Like, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
     }
 }
