@@ -172,8 +172,8 @@ async function ensureUltraNowcastSchema() {
 db.sequelize.authenticate()
   .then(async () => {
     console.log('DB 연결 성공');
-    await db.sequelize.sync(); // alter:true 지양
-    console.log('테이블 생성 및 업데이트 완료');
+    //await db.sequelize.sync({ alter: true });
+    //console.log('테이블 생성 및 업데이트 완료');
 
     await ensureUltraNowcastSchema();
 
