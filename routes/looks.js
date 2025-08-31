@@ -11,6 +11,7 @@ const { authMiddleware } = require('../middlewares/authMiddleware.js');
  *   description: 게시물(룩) 관련 API
  */
 
+// GET /api/looks - 게시물 목록 조회
 /**
  * @swagger
  * /api/looks:
@@ -40,12 +41,12 @@ const { authMiddleware } = require('../middlewares/authMiddleware.js');
  *         name: sido
  *         schema:
  *           type: string
- *         description: "시/도 필터링 (예: 서울특별시)"
+ *         description: "시/도 필터링 (예: 서울시)"
  *       - in: query
  *         name: gungu
  *         schema:
  *           type: string
- *         description: "군/구 필터링 (예: 강남구)"
+ *         description: "군/구 필터링 (예: 노원구)"
  *       - in: query
  *         name: date
  *         schema:
@@ -76,15 +77,94 @@ const { authMiddleware } = require('../middlewares/authMiddleware.js');
 router.get('/', looksControllers.getLooks);
 
 // GET /api/looks/best - BEST 10 룩 조회
+/**
+ * @swagger
+ * /api/looks/best:
+ *  get:
+ *      summary: "BEST 10 룩 조회"
+ *      tags: [Looks]
+ *      responses:
+ *          200:
+ *              description: "BEST 10 게시물 조회 성공"
+ *          500: 
+ *              description: "서버 오류"
+ */
 router.get('/best', looksControllers.getBestLooks);
 
 // GET /api/looks/:lookId - 게시물 상세 조회
+/**
+ * @swagger
+ * /api/looks/{looktoday_id}:
+ *   get:
+ *     summary: "게시물 상세 조회"
+ *     tags: [Looks]
+ *     parameters:
+ *       - in: path
+ *         name: looktoday_id
+ *         required: true
+ *         description: "조회할 게시물의 ID"
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: "게시물 상세 조회 성공"
+ *       404:
+ *         description: "해당 게시물을 찾을 수 없음"
+ *       500:
+ *         description: "서버 오류"
+ */
 router.get('/:looktoday_id', looksControllers.getLookDetail);
 
 // POST /api/looks/:lookId/like - 게시물 좋아요
+/**
+ * @swagger
+ * /api/looks/{looktoday_id}/like:
+ *   post:
+ *     summary: "게시물 좋아요"
+ *     tags: [Looks]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: looktoday_id
+ *         required: true
+ *         description: "좋아요 할 게시물의 ID"
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       201:
+ *         description: "좋아요 처리 완료"
+ *       401:
+ *         description: "인증 실패"
+ *       409:
+ *         description: "이미 좋아요를 누른 게시물"
+ */
 router.post('/:looktoday_id/like', authMiddleware, looksControllers.likePost);
 
 // DELETE /api/looks/:lookId/like - 게시물 좋아요 취소
+/**
+ * @swagger
+ * /api/looks/{looktoday_id}/like:
+ *   delete:
+ *     summary: "게시물 좋아요 취소"
+ *     tags: [Looks]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: looktoday_id
+ *         required: true
+ *         description: "좋아요를 취소할 게시물의 ID"
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: "좋아요 취소 완료"
+ *       401:
+ *         description: "인증 실패"
+ *       404:
+ *         description: "좋아요 기록을 찾을 수 없음"
+ */
 router.delete('/:looktoday_id/like', authMiddleware, looksControllers.unlikePost);
 
 module.exports = router;

@@ -66,7 +66,7 @@ if (process.env.SWAGGER !== 'off') {
         },
       },
       // looks.js 주석 YAML이 깨져 있어 파싱 에러가 나므로 일단 제외
-      apis: ['./routes/*.js', '!./routes/looks.js'],
+      apis: ['./routes/*.js'],
     };
 
     const specs = swaggerJsdoc(options);
