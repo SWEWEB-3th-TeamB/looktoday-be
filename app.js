@@ -24,7 +24,7 @@ const weatherProxy = require("./routes/weatherProxy"); // eunseo 날씨API cors 
 
 // --- Cron ---
 const weatherCron = require('./services/weatherCron');
-const postWeatherCron = require('services\postWeatherCron.js');
+const postWeatherCron = require('services/postWeatherCron.js');
 // --- ENV ---
 const PORT = process.env.PORT || 3000;
 
