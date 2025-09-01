@@ -90,7 +90,7 @@ app.use('/api/weather-proxy', weatherProxy); // eunseo 날씨API cors 문제 해
 app.use('/api/auth', authRoutes);
 app.use('/api/users', mypageRoutes);
 app.use('/api/looks', looksRoutes);
-app.use('/api', lookPostRouter);
+app.use('/api/lookPost', lookPostRouter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/sun', sunRouter);
 
