@@ -10,7 +10,7 @@ function getAllLocations() {
     for (const d of districts) {
       locations.push({
         city,
-        district: d.district,
+        district: (d.district ?? ''),
         nx: d.nx,
         ny: d.ny,
       });
@@ -27,7 +27,7 @@ function log(...args) {
 // 좌표별 1회 수집
 async function runOnceForXY(loc, now) {
   try {
-    const saved = await fetchAndSaveUltraNowcastByXY({ nx: loc.nx, ny: loc.ny, now });
+    const saved = await fetchAndSaveUltraNowcastByXY({ nx: loc.nx, ny: loc.ny, si: loc.city, gungu: (loc.district ?? ''), now });
     return saved;
   } catch (e) {
     log(`API 호출 실패: ${loc.city} ${loc.district} (${loc.nx},${loc.ny})`, e.message);
