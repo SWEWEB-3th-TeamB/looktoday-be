@@ -91,7 +91,7 @@ router.get('/', looksControllers.getLooks);
  */
 router.get('/best', looksControllers.getBestLooks);
 
-// GET /api/looks/:lookId - 게시물 상세 조회
+// GET /api/looks/:looktoday_id - 게시물 상세 조회
 /**
  * @swagger
  * /api/looks/{looktoday_id}:
@@ -115,7 +115,7 @@ router.get('/best', looksControllers.getBestLooks);
  */
 router.get('/:looktoday_id', looksControllers.getLookDetail);
 
-// POST /api/looks/:lookId/like - 게시물 좋아요
+// POST /api/looks/:looktoday_id/like - 게시물 좋아요
 /**
  * @swagger
  * /api/looks/{looktoday_id}/like:
@@ -141,7 +141,7 @@ router.get('/:looktoday_id', looksControllers.getLookDetail);
  */
 router.post('/:looktoday_id/like', authMiddleware, looksControllers.likePost);
 
-// DELETE /api/looks/:lookId/like - 게시물 좋아요 취소
+// DELETE /api/looks/:looktoday_id/like - 게시물 좋아요 취소
 /**
  * @swagger
  * /api/looks/{looktoday_id}/like:
