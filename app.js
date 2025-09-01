@@ -14,7 +14,7 @@ const db = require('./models');
 
 // --- Routers ---
 const looksRoutes = require('./routes/looks.js');
-const lookPostRouter = require('./routes/lookPost.js')(db);
+const lookPostRouter = require('./routes/lookPost.js');
 const authRoutes = require('./routes/auth');
 const mypageRoutes = require('./routes/mypage');
 const weatherRouter = require('./routes/weather');
@@ -24,7 +24,7 @@ const weatherProxy = require("./routes/weatherProxy"); // eunseo 날씨API cors 
 
 // --- Cron ---
 const weatherCron = require('./services/weatherCron');
-const postWeatherCron = require('./services/postweatherCron');
+const postWeatherCron = require('services\postWeatherCron.js');
 // --- ENV ---
 const PORT = process.env.PORT || 3000;
 
