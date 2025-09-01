@@ -13,7 +13,7 @@ db.Like = require('./like');
 db.Image = require('./image');
 
 // 초단기실황 저장 테이블 (UltraNowcast 모델 파일 필요)
-db.UltraNowcast = require('./ultraNowcast')(sequelize, Sequelize.DataTypes);
+db.UltraNowcast = require('./UltraNowcast')(sequelize, Sequelize.DataTypes);
 
 /** 2) initiate 호출 (클래스 내 정적 메서드 패턴 유지 시) */
 if (db.User?.initiate) db.User.initiate(sequelize);
