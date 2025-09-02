@@ -1,5 +1,7 @@
-const weatherService = require('../services/weatherService');
-const { ApiResponse } = require('../response');  // ApiResponse 불러오기
+const db = require('../models');
+const { UltraNowcast } = db;
+const locationMap = require('../data/locationMap');
+const { ApiResponse } = require('../response');
 
 /** 풍향(deg) → 한글 방위 */
 function windDirKo(deg) {
@@ -15,12 +17,12 @@ function windDirKo(deg) {
   return '북서풍';
 }
 
-/** 체감온도(Heat Index) 근사: TMP(℃), REH(%) → ℃ */
+/** 체감온도(간단 근사) */
 function feelsLikeC(tempC, rh) {
   const t = Number(tempC);
   const h = Number(rh);
   if (!Number.isFinite(t) || !Number.isFinite(h)) return null;
-  if (t < 20 || h < 40) return t; // 온도 낮거나 습도 낮으면 실제 기온 반환
+  if (t < 20 || h < 40) return t;
   const tf = t * 9/5 + 32;
   const hi =
     -42.379 + 2.04901523*tf + 10.14333127*h
@@ -29,107 +31,147 @@ function feelsLikeC(tempC, rh) {
   return Math.round(((hi - 32) * 5/9) * 10) / 10;
 }
 
-/** SKY/PTY 코드 → 한글 */
-const SKY_MAP = { '1': '맑음', '3': '구름 많음', '4': '흐림' };
-const PTY_MAP = { '0': '없음', '1': '비', '2': '비/눈', '3': '눈', '4': '소나기' };
+const PTY_LABEL = {
+  '0': '강수 없음', '1': '비', '2': '비/눈', '3': '눈',
+  '4': '소나기', '5': '빗방울', '6': '빗방울/눈날림', '7': '눈날림',
+};
 
-/** weatherService 결과 → 예쁜 한글 응답으로 가공 */
-function formatPrettyKorean(result) {
-  const items = Array.isArray(result?.weather_info) ? result.weather_info : [];
-
-  const si = result?.slot?.si || result?.saved?.si || null;
-  const gungu = result?.slot?.gungu || result?.saved?.gungu || null;
-  const date = result?.slot?.date || result?.saved?.date || null;
-  const time = result?.slot?.time || result?.saved?.time || null;
-
-  const hhmm = time ? (time.slice(0,2) + time.slice(3,5)) : null;
-
-  const pick = (cat) => {
-    const exact = hhmm ? items.find(i => i.category === cat && i.fcstTime === hhmm) : null;
-    const any = items.find(i => i.category === cat);
-    return (exact || any)?.fcstValue ?? null;
-  };
-
-  const tmp = pick('TMP') ?? pick('T1H');
-  const reh = pick('REH');
-  const pop = pick('POP');
-  const wsd = pick('WSD');
-  const vec = pick('VEC');
-  const pcp = pick('PCP') ?? pick('RN1');
-  const sky = pick('SKY');
-  const pty = pick('PTY');
-
-  const weatherKo = (pty && pty !== '0')
-    ? (PTY_MAP[pty] || '강수')
-    : (sky ? (SKY_MAP[sky] || '알 수 없음') : null);
-
-  const feels = feelsLikeC(tmp, reh);
-
-  return {
-    region: { '시': si, '군구': gungu },
-    기준시각: { '날짜': date, '시간': time },
-    data: {
-      '온도': tmp != null ? Number(tmp) : null,
-      '체감온도': feels,
-      '습도': reh != null ? Number(reh) : null,
-      '강수량': pcp ?? null,
-      '강수확률': pop != null ? Number(pop) : null,
-      '풍속': wsd != null ? Number(wsd) : null,
-      '풍향': (vec != null) ? `${windDirKo(vec)} (${Number(vec)}°)` : null,
-      '날씨': weatherKo
-    }
-  };
+/** 시/군구 → nx,ny */
+function getNxNy(si, gungu) {
+  const arr = locationMap[si];
+  if (!arr) return null;
+  return arr.find(d => d.district === gungu) || null;
 }
 
+/** 현재 정시(HH00) */
+function currentBase() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const H = String(now.getHours()).padStart(2, '0');
+  return { baseDate: `${y}${m}${d}`, baseTime: `${H}00` };
+}
+
+/** baseDate/time에서 시간 ±offset */
+function shift(baseDate, baseTime, hourOffset) {
+  const y = Number(baseDate.slice(0,4));
+  const mo = Number(baseDate.slice(4,6)) - 1;
+  const da = Number(baseDate.slice(6,8));
+  const H = Number(baseTime.slice(0,2));
+  const dt = new Date(y, mo, da, H, 0, 0);
+  dt.setHours(dt.getHours() + hourOffset);
+  const Y = dt.getFullYear();
+  const M = String(dt.getMonth() + 1).padStart(2, '0');
+  const D = String(dt.getDate()).padStart(2, '0');
+  const HH = String(dt.getHours()).padStart(2, '0');
+  return { baseDate: `${Y}${M}${D}`, baseTime: `${HH}00` };
+}
+
+/** 카테고리 배열 → 요약/원시 맵 */
+function buildMaps(rows) {
+  const byCat = {};
+  for (const r of rows) byCat[r.category] = String(r.obsrValue);
+
+  const tmp = byCat.T1H != null ? Number(byCat.T1H) : null;
+  const reh = byCat.REH != null ? Number(byCat.REH) : null;
+  const wsd = byCat.WSD != null ? Number(byCat.WSD) : null;
+  const vec = byCat.VEC != null ? Number(byCat.VEC) : null;
+  const rn1 = byCat.RN1 ?? null;
+  const pty = byCat.PTY ?? null;
+
+  const summary = {
+    '온도': tmp,
+    '체감온도': feelsLikeC(tmp, reh),
+    '습도': reh,
+    '강수량': rn1,
+    '강수확률': null,            // DB 실황에는 POP 없음 → null
+    '풍속': wsd,
+    '풍향': vec != null ? `${windDirKo(vec)} (${vec}°)` : null,
+    '날씨': pty ? (PTY_LABEL[pty] || `코드 ${pty}`) : null,
+  };
+
+  return { summary, raw: byCat };
+}
+
+/**
+ * GET /api/weather?si=서울특별시&gungu=종로구
+ * - 프론트 변경 0
+ * - DB(ultra_nowcast)에서 최신 실황을 읽어 예쁜 한글 포맷으로 응답
+ */
 exports.getWeather = async (req, res) => {
   try {
-    const { si, gungu, lat, lon } = req.query;
-
-    // 1) si,gungu만 넘어온 경우
-    if (si && gungu && !lat && !lon) {
-      const raw = await weatherService.getWeatherByRegion(String(si).trim(), String(gungu).trim());
-      const pretty = formatPrettyKorean(raw);
-      return res.status(200).json(
-        ApiResponse.success({
-          code: 'WEATHER200',
-          message: '날씨 데이터 조회 성공',
-          result: pretty
-        })
+    const { si, gungu } = req.query;
+    if (!si || !gungu) {
+      return res.status(400).json(
+        ApiResponse.fail({ code: 'WEATHER400', message: '시, 군구 정보가 필요합니다.' })
       );
     }
 
-    // 2) 좌표가 넘어온 경우
-    if (lat && lon) {
-      const raw = await weatherService.getWeatherByCoordinates(
-        Number(lat),
-        Number(lon),
-        { si: si || undefined, gungu: gungu || undefined }
-      );
-      const pretty = formatPrettyKorean(raw);
-      return res.status(200).json(
-        ApiResponse.success({
-          code: 'WEATHER200',
-          message: '날씨 데이터 조회 성공',
-          result: pretty
-        })
+    const loc = getNxNy(String(si).trim(), String(gungu).trim());
+    if (!loc) {
+      return res.status(404).json(
+        ApiResponse.fail({ code: 'WEATHER404', message: `좌표를 찾을 수 없습니다: ${si} ${gungu}` })
       );
     }
+    const { nx, ny } = loc;
 
-    // 3) 필수 파라미터 부재
-    return res.status(400).json(
-      ApiResponse.fail({
-        code: 'WEATHER400',
-        message: '시, 군구 정보가 필요합니다.'
+    // 크론이 매 시각 10분에 HH00 기준 데이터를 넣으므로,
+    // 현재 정시 → 없으면 -1h → -2h 순으로 폴백
+    const nowBase = currentBase();
+    const candidates = [
+      nowBase,
+      shift(nowBase.baseDate, nowBase.baseTime, -1),
+      shift(nowBase.baseDate, nowBase.baseTime, -2),
+    ];
+
+    let chosen = null;
+    let rows = null;
+
+    for (const c of candidates) {
+      const found = await UltraNowcast.findAll({
+        where: { baseDate: c.baseDate, baseTime: c.baseTime, nx, ny },
+        order: [['category', 'ASC']],
+      });
+      if (found?.length) {
+        chosen = c;
+        rows = found.map(r => ({ category: r.category, obsrValue: r.obsrValue }));
+        break;
+      }
+    }
+
+    if (!rows) {
+      // 아직 수집 전/지연 중
+      return res.status(204).json(); // No Content
+    }
+
+    const { summary } = buildMaps(rows);
+
+    const pretty = {
+      success: true,
+      region: { '시': si, '군구': gungu },
+      기준시각: {
+        '날짜': `${chosen.baseDate.slice(0,4)}-${chosen.baseDate.slice(4,6)}-${chosen.baseDate.slice(6,8)}`,
+        '시간': `${chosen.baseTime.slice(0,2)}:00:00`,
+      },
+      data: summary,
+    };
+
+    res.set('Cache-Control', 'public, max-age=60');
+    return res.status(200).json(
+      ApiResponse.success({
+        code: 'WEATHER200',
+        message: '날씨 데이터 조회 성공',
+        result: pretty,
       })
     );
-
-  } catch (error) {
-    console.error('날씨 정보 조회 오류:', error);
-    return res.status(502).json(
+  } catch (err) {
+    console.error('[GET /api/weather] error', err);
+    return res.status(500).json(
       ApiResponse.fail({
-        code: 'WEATHER502',
-        message: '날씨 정보를 불러오지 못했습니다.',
-        error: { detail: error.message }
+        code: 'WEATHER500',
+        message: '서버 오류',
+        error: { detail: err.message },
       })
     );
   }
