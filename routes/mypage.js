@@ -25,6 +25,6 @@ router.get('/me/feeds', mypageController.getMyFeeds);
 router.get('/me/likes', mypageController.getMyLikes);
 
 // 내 게시글 삭제
-router.delete('/posts/:postId', mypageController.deleteMyLook);
+router.delete('/posts/:looktoday_id', mypageController.deleteMyLook);
 
 module.exports = router;
