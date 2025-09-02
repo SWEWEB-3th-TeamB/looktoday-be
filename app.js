@@ -69,9 +69,6 @@ if (process.env.SWAGGER !== 'off') {
           },
         },
       },
-
-    },
-  },
   apis: ['./routes/*.js'], // API 주석이 담긴 파일들의 경로
 };
 const specs = swaggerJsdoc(options);
@@ -91,7 +88,6 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 // 이제 /api/weather 경로로 들어오는 모든 요청은 weatherRouter가 처리합니다.
 
 // --- 라우터 등록 ---
-=======
       // looks.js 주석 YAML이 깨져 있어 파싱 에러가 나므로 일단 제외
       apis: ['./routes/*.js'],
     };
