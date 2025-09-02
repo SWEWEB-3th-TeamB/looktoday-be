@@ -20,6 +20,10 @@ function buildDateFilter(query) {
   const now = new Date();
   let start, end;
 
+    // 최근 5년 기본값
+  const fiveYearsAgo = new Date();
+  fiveYearsAgo.setFullYear(now.getFullYear() - 5);
+
   // 최근 12개월
   if (period === '12m') {
     start = new Date();
@@ -40,18 +44,15 @@ function buildDateFilter(query) {
   else if (dateFrom || dateTo) {
     start = dateFrom ? new Date(dateFrom + 'T00:00:00') : new Date();
     end = dateTo ? new Date(dateTo + 'T23:59:59') : now;
-  }
-  // 기본값: 최근 12개월
-  else {
-    start = new Date();
-    start.setMonth(start.getMonth() - 12);
-    end = now;
+
+        if (start < fiveYearsAgo || end < fiveYearsAgo) {
+      throw new Error('최근 5년까지 조회 가능합니다.');
+    }
+    if (end > now) {
+      end = now; // 미래 선택 방지
+    }
   }
 
-  // 최근 5년으로 제한
-  const fiveYearsAgo = new Date();
-  fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-  if (start < fiveYearsAgo) start = fiveYearsAgo;
 
   return { createdAt: { [Op.gte]: start, [Op.lt]: end } };
 }
@@ -355,8 +356,8 @@ exports.deleteMyLook = async (req, res) => {
 
     // 내가 쓴 글인지 확인
     const post = await Post.findOne({
-      where: { looktoday_id: looktoday_id, user_id: req.user.id },
-      include: [{ model: db.Image }], // 모델 import 맞게 확인
+      where: { looktoday_id, user_id: req.user.id },
+      include: [{ model: db.Image, as: 'Image' }], // 모델 import 맞게 확인
     });
 
     if (!post) {
@@ -368,10 +369,8 @@ exports.deleteMyLook = async (req, res) => {
     }
 
     // post에 연결된 이미지도 삭제
-    if (post.Images && post.Images.length > 0) { 
-      for (const img of post.Images) {
-        await img.destroy(); // DB에서 완전 삭제
-      }
+    if (post.Image) { 
+      await post.Image.destroy(); // 1개니까 반복문 필요 없음
     }
 
     // post 삭제 (DB에서 완전 삭제)
