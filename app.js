@@ -65,8 +65,8 @@ if (process.env.SWAGGER !== 'off') {
               type: 'http',
               scheme: 'bearer',
               bearerFormat: 'JWT',
-            }, 
-          },
+            }
+          }
         },
   },
 apis: ['./routes/*.js'], // API 주석이 담긴 파일들의 경로
