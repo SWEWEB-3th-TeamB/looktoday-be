@@ -35,7 +35,7 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Authorization'],
+  exposedHeaders: ['Authorization']
 }));
 
 app.options('*', cors()); // eunseo 날씨API cors 수정
@@ -127,7 +127,7 @@ async function ensureUltraNowcastSchema() {
   let table = {};
   try {
     table = await qi.describeTable('ultra_nowcast');
-  } catch {
+  } catch (err) {
     return;
   }
 
@@ -206,8 +206,9 @@ db.sequelize.authenticate()
 
     await ensureUltraNowcastSchema();
 
-    weatherCron.start();
-    postWeatherCron.start();
+    try { weatherCron.start?.(); } catch(e) { console.error('[cron] weatherCron 시작 실패:', e); }
+    try { postWeatherCron.start?.(); } catch(e) { console.error('[cron] postWeatherCron 시작 실패:', e); }
+
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`${PORT}번 포트에서 대기 중`);
