@@ -118,6 +118,7 @@ router.get('/best', looksControllers.getBestLooks);
  */
 router.get('/:looktoday_id', looksControllers.getLookDetail);
 
+
 // POST /api/looks/{looktoday_id}/like - 게시물 좋아요
 /**
  * @swagger

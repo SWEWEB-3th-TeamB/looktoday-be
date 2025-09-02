@@ -1,26 +1,35 @@
 const express = require("express");
 const axios = require("axios");
-const getXY = require("../utils/getXY"); // lat/lon → 격자 좌표 변환
+const locationMap = require("../data/locationMap"); // 시군구 → nx, ny 매핑 데이터
 const router = express.Router();
 
 const SERVICE_URL = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0";
-const SERVICE_KEY = process.env.WEATHER_API_KEY; // .env에 저장된 기상청 서비스키 (디코딩 안 된 원본)
+const SERVICE_KEY = process.env.WEATHER_API_KEY; // .env에 있는 서비스 키
 
 router.get("/ultra-now", async (req, res) => {
   try {
-    const { lat, lon } = req.query;
+    const { si, gungu } = req.query;
 
-    // 1. 위경도 → 격자 좌표 변환
-    const { nx, ny } = getXY(lat, lon);
+    // 1. 시군구 → nx, ny 찾기
+    if (!locationMap[si]) {
+      return res.status(400).json({ ok: false, message: "시 정보가 잘못되었습니다." });
+    }
 
-    // 2. 기준 날짜 & 시간 설정
+    const district = locationMap[si].find(d => d.district === gungu);
+    if (!district) {
+      return res.status(400).json({ ok: false, message: "군구 정보가 잘못되었습니다." });
+    }
+
+    const { nx, ny } = district;
+
+    // 2. 기준 날짜 및 시간 계산
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const day = String(now.getDate()).padStart(2, "0");
     const base_date = `${year}${month}${day}`;
 
-    // 초단기실황은 매시 40분 이후부터 직전 시각 자료 사용
+    // 초단기실황: 매시 40분 이후부터 직전 시각 데이터 사용
     const hour = now.getMinutes() >= 40 ? now.getHours() : now.getHours() - 1;
     const base_time = `${String(hour).padStart(2, "0")}00`;
 

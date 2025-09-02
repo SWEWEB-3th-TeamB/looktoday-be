@@ -20,7 +20,7 @@ const mypageRoutes = require('./routes/mypage');
 const weatherRouter = require('./routes/weather');
 const weatherNowRoutes = require('./routes/weatherNow');
 const sunRouter = require('./routes/sun');
-const weatherProxy = require("./routes/weatherProxy"); // eunseo 날씨API cors 해결코드
+const weatherProxy = require("./routes/weatherProxy"); // 날씨API cors 해결코드
 
 // --- Cron ---
 const weatherCron = require('./services/weatherCron');
@@ -35,10 +35,10 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Authorization'],
+  exposedHeaders: ['Authorization']
 }));
 
-app.options('*', cors()); // eunseo 날씨API cors 수정
+// app.options('*', cors());
 
 app.use(morgan('dev'));
 app.use('/', express.static(path.join(__dirname, 'public')));
@@ -84,9 +84,10 @@ if (process.env.SWAGGER !== 'off') {
 }
 
 // --- Routes ---
+
 app.use('/api/weather', weatherRouter);
 app.use('/api/weather', weatherNowRoutes);
-app.use('/api/weather-proxy', weatherProxy); // eunseo 날씨API cors 문제 해결 추가 코드
+app.use('/api/weather-proxy', weatherProxy); // 날씨API cors 문제 해결 추가 코드
 app.use('/api/auth', authRoutes);
 app.use('/api/users', mypageRoutes);
 app.use('/api/looks', looksRoutes);
@@ -103,7 +104,7 @@ async function ensureUltraNowcastSchema() {
   let table = {};
   try {
     table = await qi.describeTable('ultra_nowcast');
-  } catch {
+  } catch (err) {
     return;
   }
 
@@ -182,8 +183,9 @@ db.sequelize.authenticate()
 
     await ensureUltraNowcastSchema();
 
-    weatherCron.start();
-    postWeatherCron.start();
+    try { weatherCron.start?.(); } catch(e) { console.error('[cron] weatherCron 시작 실패:', e); }
+    try { postWeatherCron.start?.(); } catch(e) { console.error('[cron] postWeatherCron 시작 실패:', e); }
+
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`${PORT}번 포트에서 대기 중`);
