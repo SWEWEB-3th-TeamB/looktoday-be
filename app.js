@@ -20,7 +20,7 @@ const mypageRoutes = require('./routes/mypage');
 const weatherRouter = require('./routes/weather');
 const weatherNowRoutes = require('./routes/weatherNow');
 const sunRouter = require('./routes/sun');
-const weatherProxy = require("./routes/weatherProxy"); // eunseo 날씨API cors 해결코드
+const weatherProxy = require("./routes/weatherProxy"); // 날씨API cors 해결코드
 
 // --- Cron ---
 const weatherCron = require('./services/weatherCron');
@@ -38,7 +38,7 @@ app.use(cors({
   exposedHeaders: ['Authorization'],
 }));
 
-app.options('*', cors()); // eunseo 날씨API cors 수정
+// app.options('*', cors());
 
 app.use(morgan('dev'));
 app.use('/', express.static(path.join(__dirname, 'public')));
@@ -86,7 +86,7 @@ if (process.env.SWAGGER !== 'off') {
 // --- Routes ---
 app.use('/api/weather', weatherRouter);
 app.use('/api/weather', weatherNowRoutes);
-app.use('/api/weather-proxy', weatherProxy); // eunseo 날씨API cors 문제 해결 추가 코드
+app.use('/api/weather-proxy', weatherProxy); // 날씨API cors 문제 해결 추가 코드
 app.use('/api/auth', authRoutes);
 app.use('/api/users', mypageRoutes);
 app.use('/api/looks', looksRoutes);
