@@ -15,7 +15,7 @@ class ApiResponse {
     message = "요청에 실패했습니다.",
     error = {},
   }) {
-    return new CustomError(code, message, error);
+    return { code, message, error };
   }
 }
 
