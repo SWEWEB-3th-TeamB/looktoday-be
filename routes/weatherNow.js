@@ -1,4 +1,3 @@
-// routes/weatherNow.js
 const express = require('express');
 const router = express.Router();
 const db = require('../models');
@@ -38,7 +37,7 @@ function currentBase() {
   return { baseDate: `${y}${m}${d}`, baseTime: `${H}00` };
 }
 
-// baseDate만 바꾸지 않고 시간만 ±h 이동 (자정 넘어가면 날짜 보정)
+// baseDate/time 시간만 ±h 이동
 function shift(baseDate, baseTime, hourOffset) {
   const y = Number(baseDate.slice(0, 4));
   const mo = Number(baseDate.slice(4, 6)) - 1;
@@ -49,8 +48,23 @@ function shift(baseDate, baseTime, hourOffset) {
   const Y = dt.getFullYear();
   const M = String(dt.getMonth() + 1).padStart(2, '0');
   const D = String(dt.getDate()).padStart(2, '0');
-  const HH = String(dt.getHours()).padStart(2, '0');
+  const HH = String(dt.getHours() + 0).padStart(2, '0');
   return { baseDate: `${Y}${M}${D}`, baseTime: `${HH}00` };
+}
+
+// row(가로형 1행) -> [{ category, obsrValue }] 배열로 변환
+function rowToItems(row) {
+  const items = [];
+  if (row.tmp != null) items.push({ category: 'T1H', obsrValue: row.tmp });
+  if (row.reh != null) items.push({ category: 'REH', obsrValue: row.reh });
+  if (row.wsd != null) items.push({ category: 'WSD', obsrValue: row.wsd });
+  if (row.vec != null) items.push({ category: 'VEC', obsrValue: row.vec });
+  if (row.uuu != null) items.push({ category: 'UUU', obsrValue: row.uuu });
+  if (row.vvv != null) items.push({ category: 'VVV', obsrValue: row.vvv });
+  if (row.pty != null) items.push({ category: 'PTY', obsrValue: row.pty });
+  if (row.pcp != null) items.push({ category: 'RN1', obsrValue: row.pcp });
+  if (row.lgt != null) items.push({ category: 'LGT', obsrValue: row.lgt });
+  return items;
 }
 
 // 카테고리 배열 → 한글 요약/원시 맵
@@ -64,9 +78,7 @@ function buildPayload(items) {
     if (cat === 'PTY') {
       summary[conf.key] = PTY_LABEL[byCat.PTY] || `코드 ${byCat.PTY}`;
     } else {
-      summary[conf.key] = conf.unit
-        ? `${byCat[cat]}${conf.unit}`
-        : byCat[cat];
+      summary[conf.key] = conf.unit ? `${byCat[cat]}${conf.unit}` : byCat[cat];
     }
   }
   return { summary, raw: byCat };
@@ -98,22 +110,17 @@ router.get('/now', async (req, res) => {
     let rows = null;
 
     for (const c of candidates) {
-      const found = await UltraNowcast.findAll({
+      const found = await UltraNowcast.findOne({
         where: { baseDate: c.baseDate, baseTime: c.baseTime, nx, ny },
-        order: [['category', 'ASC']],
       });
-      if (found?.length) {
+      if (found) {
         chosen = c;
-        rows = found.map(r => ({
-          category: r.category,
-          obsrValue: r.obsrValue,
-        }));
+        rows = rowToItems(found);   // ← 1행을 카테고리 배열로 변환
         break;
       }
     }
 
     if (!rows) {
-      // 아직 수집 전
       return res.status(204).json(); // No Content
     }
 
@@ -126,8 +133,8 @@ router.get('/now', async (req, res) => {
       ny,
       baseDate: chosen.baseDate,
       baseTime: chosen.baseTime,
-      weather: summary,        // ✅ 한글/단위 포함 요약
-      raw,                     // (옵션) 카테고리 원시값
+      weather: summary,  // 한글/단위 포함 요약
+      raw,               // 원시 카테고리 맵(옵션)
     });
   } catch (err) {
     console.error('[weather/now] error', err);
