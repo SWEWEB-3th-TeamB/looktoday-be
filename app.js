@@ -189,16 +189,16 @@ db.sequelize.authenticate()
     console.log('DB 연결 성공');
 
     // ✅ 개발용: 부팅 시 테이블/컬럼 자동 동기화
-    try {
-      if (process.env.SYNC_ON_BOOT === '1') {
-        await db.sequelize.sync({ alter: true });
-        console.log('[sequelize] sync({ alter: true }) 완료 - 테이블/컬럼 동기화');
-      } else {
-        console.log('[sequelize] sync 스킵 (SYNC_ON_BOOT 환경변수 미설정)');
-      }
-    } catch (e) {
-      console.error('[sequelize] sync 실패:', e);
-    }
+    // try {
+    //   if (process.env.SYNC_ON_BOOT === '1') {
+    //     await db.sequelize.sync({ alter: true });
+    //     console.log('[sequelize] sync({ alter: true }) 완료 - 테이블/컬럼 동기화');
+    //   } else {
+    //     console.log('[sequelize] sync 스킵 (SYNC_ON_BOOT 환경변수 미설정)');
+    //   }
+    // } catch (e) {
+    //   console.error('[sequelize] sync 실패:', e);
+    // }
 
     // 스키마 보정
     await ensureUltraNowcastSchema();
