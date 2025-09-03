@@ -68,7 +68,22 @@ function shift(baseDate, baseTime, hourOffset) {
   return { baseDate: `${Y}${M}${D}`, baseTime: `${HH}00` };
 }
 
-/** 카테고리 배열 → 요약/원시 맵 */
+/** row(가로형 1행) → [{category, obsrValue}] 배열로 변환 (기존 buildMaps 재사용용) */
+function rowToItems(row) {
+  const items = [];
+  if (row.tmp != null) items.push({ category: 'T1H', obsrValue: row.tmp });
+  if (row.reh != null) items.push({ category: 'REH', obsrValue: row.reh });
+  if (row.wsd != null) items.push({ category: 'WSD', obsrValue: row.wsd });
+  if (row.vec != null) items.push({ category: 'VEC', obsrValue: row.vec });
+  if (row.uuu != null) items.push({ category: 'UUU', obsrValue: row.uuu });
+  if (row.vvv != null) items.push({ category: 'VVV', obsrValue: row.vvv });
+  if (row.pty != null) items.push({ category: 'PTY', obsrValue: row.pty });
+  if (row.pcp != null) items.push({ category: 'RN1', obsrValue: row.pcp }); // 강수량은 RN1로
+  if (row.lgt != null) items.push({ category: 'LGT', obsrValue: row.lgt });
+  return items;
+}
+
+/** 카테고리 배열 → 요약/원시 맵 (기존 로직 그대로) */
 function buildMaps(rows) {
   const byCat = {};
   for (const r of rows) byCat[r.category] = String(r.obsrValue);
@@ -96,8 +111,7 @@ function buildMaps(rows) {
 
 /**
  * GET /api/weather?si=서울특별시&gungu=종로구
- * - 프론트 변경 0
- * - DB(ultra_nowcast)에서 최신 실황을 읽어 예쁜 한글 포맷으로 응답
+ * - DB(ultra_nowcast)에서 최신 실황 1행을 읽어서 기존 포맷으로 응답
  */
 exports.getWeather = async (req, res) => {
   try {
@@ -116,8 +130,7 @@ exports.getWeather = async (req, res) => {
     }
     const { nx, ny } = loc;
 
-    // 크론이 매 시각 10분에 HH00 기준 데이터를 넣으므로,
-    // 현재 정시 → 없으면 -1h → -2h 순으로 폴백
+    // 현재 정시 → 없으면 -1h → -2h 폴백
     const nowBase = currentBase();
     const candidates = [
       nowBase,
@@ -129,19 +142,17 @@ exports.getWeather = async (req, res) => {
     let rows = null;
 
     for (const c of candidates) {
-      const found = await UltraNowcast.findAll({
+      const found = await UltraNowcast.findOne({
         where: { baseDate: c.baseDate, baseTime: c.baseTime, nx, ny },
-        order: [['category', 'ASC']],
       });
-      if (found?.length) {
+      if (found) {
         chosen = c;
-        rows = found.map(r => ({ category: r.category, obsrValue: r.obsrValue }));
+        rows = rowToItems(found);   // ← 1행을 카테고리 배열로 변환
         break;
       }
     }
 
     if (!rows) {
-      // 아직 수집 전/지연 중
       return res.status(204).json(); // No Content
     }
 
