@@ -45,7 +45,7 @@ app.use('/', express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
-// --- Swagger (문서 파싱 오류로 서버 죽지 않게 가드) ---
+// Swagger 
 if (process.env.SWAGGER !== 'off') {
   try {
     const swaggerJsdoc = require('swagger-jsdoc');
@@ -59,6 +59,16 @@ if (process.env.SWAGGER !== 'off') {
           version: '1.0.0',
           description: 'LookToday의 API 문서입니다.',
         },
+        servers: [
+          {
+            url: 'http://43.203.195.97:3000',
+            description: 'Production server'
+          },
+          {
+            url: 'http://localhost:3000',
+            description: 'Local development server'
+          }
+        ],
         components: {
           securitySchemes: {
             BearerAuth: {
@@ -69,7 +79,6 @@ if (process.env.SWAGGER !== 'off') {
           },
         },
       },
-      // looks.js 주석 YAML이 깨져 있어 파싱 에러가 나므로 일단 제외
       apis: ['./routes/*.js'],
     };
 
