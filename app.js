@@ -187,14 +187,24 @@ async function ensureUltraNowcastSchema() {
 db.sequelize.authenticate()
   .then(async () => {
     console.log('DB 연결 성공');
-    //await db.sequelize.sync({ alter: true });
-    //console.log('테이블 생성 및 업데이트 완료');
 
+    // ✅ 개발용: 부팅 시 테이블/컬럼 자동 동기화
+    try {
+      if (process.env.SYNC_ON_BOOT === '1') {
+        await db.sequelize.sync({ alter: true });
+        console.log('[sequelize] sync({ alter: true }) 완료 - 테이블/컬럼 동기화');
+      } else {
+        console.log('[sequelize] sync 스킵 (SYNC_ON_BOOT 환경변수 미설정)');
+      }
+    } catch (e) {
+      console.error('[sequelize] sync 실패:', e);
+    }
+
+    // 스키마 보정
     await ensureUltraNowcastSchema();
 
     try { weatherCron.start?.(); } catch(e) { console.error('[cron] weatherCron 시작 실패:', e); }
     try { postWeatherCron.start?.(); } catch(e) { console.error('[cron] postWeatherCron 시작 실패:', e); }
-
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`${PORT}번 포트에서 대기 중`);
