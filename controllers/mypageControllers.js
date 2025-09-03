@@ -1,6 +1,7 @@
 const { Op, fn, col, literal } = require('sequelize');
 const db = require('../models');
 const { getAttributes } = require('../models/image');
+const { ApiResponse } = require('../response');
 const User = db.User;
 const Post = db.Post;
 const Like = db.Like;
@@ -63,18 +64,24 @@ exports.updateProfile = async (req, res) => {
         const { email,currentPassword, newPassword, confirmPassword, nickname, birth, si, gungu} = req.body;
 
         const me = await User.findByPk(req.user.id);
-        if (!me) return res.status(404).json({ 
-            httpStatus: 'NOT_FOUND', 
-            isSuccess: false,
-            message: '사용자를 찾을 수 없습니다.'});
+        if (!me) return res
+        .status(404)
+        .json(ApiResponse.fail({ 
+            code: "USER404",
+            message: '사용자를 찾을 수 없습니다.',
+            error: {}
+          }));
 
             if (email && email !== me.email) {
               const existingUserByEmail = await User.findOne ({ where: {email}});
               if(existingUserByEmail) {
-                return res.status(409).json({
-                  isSuccess: false,
-                  message: '이미 가입된 이메일 주소입니다. '
-                });
+                return res
+                .status(409)
+                .json(ApiResponse.fail({
+                  code: "USER409",
+                  message: '이미 가입된 이메일 주소입니다. ',
+                  error: {}
+                }));
               }
               me.email = email;
             }
@@ -82,10 +89,13 @@ exports.updateProfile = async (req, res) => {
             if (nickname && nickname !== me.nickname) {
               const existingUserByNickname = await User.findOne({ where: {nickname}});
               if(existingUserByNickname) {
-                return res.status(409).json({
-                  isSuccess: false,
-                  message: '이미 사용 중인 닉네임입니다.'
-                });
+                return res
+                .status(409)
+                .json(ApiResponse.fail({
+                  code: "USER409",
+                  message: '이미 사용 중인 닉네임입니다.',
+                  error: {}
+                }));
               }
               me.nickname = nickname;
             }
@@ -93,10 +103,13 @@ exports.updateProfile = async (req, res) => {
             if (birth) {
               const parsedDateOfBirth = new Date(birth);
               if (isNaN(parsedDateOfBirth.getTime())) {
-                return res.status(400).json({
-                  isSuccess: false,
-                  message: '유효하지 않은 생년월일 형식입니다. YYYY/MM/DD 형식으로 입력해주세요.'
-                });
+                return res
+                .status(400)
+                .json(ApiResponse.fail({
+                  code: "USER400",
+                  message: '유효하지 않은 생년월일 형식입니다. YYYY/MM/DD 형식으로 입력해주세요.',
+                  error: {}
+                }));
               }
               me.birth = parsedDateOfBirth;
             }
@@ -115,40 +128,48 @@ exports.updateProfile = async (req, res) => {
 
               //현재 비밀번호 입력
               if(!currentPassword) {
-                return res.status(400).json({
-                  httpStatus: 'BAD_REQUEST',
-                  isSuccess: false,
-                  message: '비밀번호가 일치하지 않습니다.'
-                });
+                return res
+                .status(400)
+                .json(ApiResponse.fail({
+                  code: "USER400",
+                  message: '비밀번호가 일치하지 않습니다.',
+                  error: {}
+                }));
               }
               
               //현재 비밀번호 일치 확인
               const isMatch = await bcrypt.compare(currentPassword, me.password);
               if(!isMatch) {
-                return res.status(400).json({
-                  httpStatus: 'BAD_REQUEST',
-                  isSuccess: false,
-                  message: '현재 비밀번호가 일치하지 않습니다.'
-                })
+                return res
+                .status(400)
+                .json(ApiResponse.fail({
+                  code: "USER400",
+                  message: '현재 비밀번호가 일치하지 않습니다.',
+                  error: {}
+                }));
               }
 
               //새 비밀번호 형식 확인
               const passwordRegex = /^(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,}$/;
               if (!passwordRegex.test(newPassword)) {
-                return res.status(400).json({
-                  httpStatus: 'BAD_REQUEST',
-                  isSuccess: false,
-                  message: '올바른 비밀번호 형식이 아닙니다.'
-                });
+                return res
+                .status(400)
+                .json(ApiResponse.fail({
+                  code: "USER400",
+                  message: '올바른 비밀번호 형식이 아닙니다.',
+                  error: {}
+                }));
               }
 
               //새 비밀번호와 확인 일치 여부
               if (newPassword !== confirmPassword) {
-                return res.status(400).json({
-                  httpStatus: 'BAD_REQUEST',
-                  isSuccess:false,
-                  message: '비밀번호가 일치하지 않습니다. '
-                })
+                return res
+                .status(400)
+                .json(ApiResponse.fail({
+                  code: "USER400",
+                  message: '비밀번호가 일치하지 않습니다. ',
+                  error: {}
+                }));
               }
 
               //비밀번호 해싱
@@ -159,10 +180,11 @@ exports.updateProfile = async (req, res) => {
             console.log(me);
             await me.save();
 
-            return res.json({
-                httpStatus: 'OK',
-                isSuccess: true,
-                message: '프로필이 성공적으로 수정되었습니다.',
+            return res
+            .status(200)
+            .json(ApiResponse.success({
+              code: "USER200",
+              message: '프로필이 성공적으로 수정되었습니다.',
                 result: {
                     user_id: me.user_id,
                     email: me.email,
@@ -171,13 +193,16 @@ exports.updateProfile = async (req, res) => {
                     si: me.si,
                     gungu: me.gungu
                  }
-             });
-          } catch (e) {
-             console.error(e);
-              return res.status(500).json({ 
-                httpStatus: 'INTERNAL_SERVER_ERROR', 
-                isSuccess: false, 
-                message: '서버 오류입니다.' });
+             }));
+          } catch (err) {
+             console.error(err);
+              return res
+              .status(500)
+              .json(ApiResponse.fail({
+                code: "COMMON500",
+                message: '서버 오류입니다.',
+              error: { detail: err.message }
+             }));
   }
 };
 
@@ -244,9 +269,10 @@ exports.getMyFeeds = async (req, res) => {
       filter = { type: 'period', value: req.query.period };
     }
 
-    return res.json({
-      httpStatus: 'OK',
-      isSuccess: true,
+    return res
+    .status(200)
+    .json(ApiResponse.success({
+      code: "FEED200",
       message: '내 피드 조회에 성공했습니다.',
       result: {
         filter,
@@ -258,14 +284,16 @@ exports.getMyFeeds = async (req, res) => {
         },
         myLooks
       }
-    });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      httpStatus: 'INTERNAL_SERVER_ERROR',
-      isSuccess: false,
-      message: '서버 오류입니다.'
-    });
+    }));
+  } catch (err) {
+    console.error(err);
+    return res
+    .status(500)
+    .json(ApiResponse.fail({
+      code: "COMMON500",
+      message: '서버 오류입니다.',
+      error: {}
+    }));
   }
 };
 
@@ -323,9 +351,10 @@ exports.getMyLikes = async (req, res) => {
       filter = { type: 'period', value: req.query.period };
     }
 
-    return res.json({
-      httpStatus: 'OK',
-      isSuccess: true,
+    return res
+    .status(200)
+    .json({
+      code: "LIKE200",
       message: '내가 좋아요 한 게시물 목록 조회에 성공했습니다. ',
       result: {
         filter,
@@ -338,12 +367,14 @@ exports.getMyLikes = async (req, res) => {
       myLikes,
     },
     });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      httpStatus: 'INTERNAL_SERVER_ERROR',
-      isSuccess: false,
+  } catch (err) {
+    console.error(err);
+    return res
+    .status(500)
+    .json({
+      code: "COMMON500",
       message: '서버 오류입니다.',
+      error: { detail: err.message },
     });
   }
 };
@@ -361,10 +392,12 @@ exports.deleteMyLook = async (req, res) => {
     });
 
     if (!post) {
-      return res.status(404).json({
-        httpStatus: 'NOT_FOUND',
-        isSuccess: false,
+      return res
+      .status(404)
+      .json({
+        code: "LOOK404",
         message: '해당 게시물을 찾을 수 없습니다.',
+        error: {}
       });
     }
 
@@ -376,17 +409,18 @@ exports.deleteMyLook = async (req, res) => {
     // post 삭제 (DB에서 완전 삭제)
     await post.destroy({ force: true }); // 물리삭제
 
-    return res.json({
-      httpStatus: 'OK',
-      isSuccess: true,
+    return res
+    .status(200)
+    .json({
+      code: "LOOK200",
       message: '게시물이 삭제되었습니다.',
     });
-  } catch (e) {
-    console.error(e);
+  } catch (err) {
+    console.error(err);
     return res.status(500).json({
-      httpStatus: 'INTERNAL_SERVER_ERROR',
-      isSuccess: false,
+      code: "COMMON500",
       message: '서버 오류입니다.',
+      error: { detail: err.message }
     });
   }
 };
