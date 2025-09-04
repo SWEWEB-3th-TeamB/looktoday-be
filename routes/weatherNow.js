@@ -84,7 +84,72 @@ function buildPayload(items) {
   return { summary, raw: byCat };
 }
 
-// GET /api/weather/now?si=서울특별시&gungu=강남구
+/**
+ * @swagger
+ * tags:
+ *   name: WeatherNow
+ *   description: 초단기 실황 NOW 조회 API
+ */
+
+/**
+ * @swagger
+ * /api/weather/now:
+ *   get:
+ *     summary: "초단기 실황 NOW 조회 (시·군·구 기준)"
+ *     description: "현재 정시 기준으로, 없으면 -1h/-2h 순으로 폴백하여 가장 최근 관측값을 반환합니다."
+ *     tags: [WeatherNow]
+ *     parameters:
+ *       - in: query
+ *         name: si
+ *         required: true
+ *         schema: { type: string }
+ *         description: "시/도 (예: 서울특별시)"
+ *       - in: query
+ *         name: gungu
+ *         required: true
+ *         schema: { type: string }
+ *         description: "군/구 (예: 노원구)"
+ *     responses:
+ *       200:
+ *         description: "조회 성공"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 si: { type: string, example: "서울특별시" }
+ *                 gungu: { type: string, example: "노원구" }
+ *                 nx: { type: integer, example: 61 }
+ *                 ny: { type: integer, example: 127 }
+ *                 baseDate: { type: string, example: "20250828" }
+ *                 baseTime: { type: string, example: "1300" }
+ *                 weather:
+ *                   type: object
+ *                   properties:
+ *                     기온: { type: string, example: "28℃" }
+ *                     습도: { type: string, example: "65%" }
+ *                     풍속: { type: string, example: "1.3m/s" }
+ *                     풍향: { type: string, example: "304°" }
+ *                     강수형태: { type: string, example: "강수 없음" }
+ *                 raw:
+ *                   type: object
+ *                   properties:
+ *                     T1H: { type: string, example: "28.0" }
+ *                     REH: { type: string, example: "65" }
+ *                     WSD: { type: string, example: "1.3" }
+ *                     VEC: { type: string, example: "304" }
+ *                     UUU: { type: string, example: "0.3" }
+ *                     VVV: { type: string, example: "-0.2" }
+ *                     PTY: { type: string, example: "0" }
+ *       204:
+ *         description: "콘텐츠 없음 (해당 시각 데이터 미존재)"
+ *       400:
+ *         description: "잘못된 요청(시/군구 누락 등)"
+ *       404:
+ *         description: "좌표(nx, ny) 미발견"
+ *       500:
+ *         description: "서버 오류"
+ */
 router.get('/now', async (req, res) => {
   try {
     const { si, gungu } = req.query;
