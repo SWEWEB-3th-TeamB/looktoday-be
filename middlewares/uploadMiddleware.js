@@ -1,7 +1,7 @@
 // middlewares/uploadMiddleware.js
 require('dotenv').config();
 const multer = require('multer');
-const multerS3 = require('multer-s3-v3');
+const multerS3 = require('multer-s3');
 const path = require('path');
 const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3'); 
 
