@@ -3,7 +3,7 @@ require('dotenv').config();
 const multer = require('multer');
 const multerS3 = require('multer-s3-v3');
 const path = require('path');
-const { S3Client } = require('@aws-sdk/client-s3'); 
+const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3'); 
 
 // AWS S3 설정
 const s3 = new S3Client({
@@ -20,7 +20,7 @@ const upload = multer({
         s3,
         bucket: process.env.S3_BUCKET_NAME,
         contentType: multerS3.AUTO_CONTENT_TYPE,
-        acl: 'public-read',
+        // acl: 'public-read',
         key(req, file, cb) {
             //파일 경로 및 이름 설정
             cb(null, `uploads/${Date.now()}_${path.basename(file.originalname)}`);
@@ -39,7 +39,6 @@ const deleteFile = async (imageUrl) => {
     try {
         const url = new URL(imageUrl);
         const key = url.pathname.substring(1); // 맨 앞의 '/' 제거
-        const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
         await s3.send(new DeleteObjectCommand({
             Bucket: process.env.S3_BUCKET_NAME,
