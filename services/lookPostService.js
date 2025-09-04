@@ -46,8 +46,9 @@ exports.createPost = async (user, body, file) => {
     }
 
     // DB에 이미지 정보 저장
+    const imageUrl = file.location || file.url;
     const savedImage = await Image.create({
-        imageUrl: file.location // DB에 S3 파일 URL 저장
+        imageUrl // DB에 S3 파일 URL 저장
     });
 
     const user_id = user.user_id; // 로그인 사용자 ID
@@ -109,13 +110,14 @@ exports.updatePost = async (looktoday_id, user, body, file) => {
     if (file) {
         // 기존 이미지 찾아서 교체
         const image = await Image.findOne({ where: { looktoday_id } });
+        const imageUrl = file.location || file.url;
         if (image) {
             await deleteFile(image.imageUrl); // 기존 파일 삭제
-            await image.update({ imageUrl: file.location }); // 이미지 URL 업데이트
+            await image.update({ imageUrl }); // 이미지 URL 업데이트
         } else {
             // 기존 이미지 없으면 새로 생성
             await Image.create({
-                imageUrl: file.location,
+                imageUrl,
                 looktoday_id
             });
         }
