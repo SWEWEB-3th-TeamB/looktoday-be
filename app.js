@@ -50,6 +50,13 @@ if (process.env.SWAGGER !== 'off') {
   try {
     const swaggerJsdoc = require('swagger-jsdoc');
     const swaggerUi = require('swagger-ui-express');
+    const path = require('path'); // 절대경로 글롭에 필요
+
+    // ✅ 라우트 파일을 절대경로로 스캔(서브폴더 포함)
+    const swaggerFiles = [
+      path.join(__dirname, 'routes', '*.js'),
+      path.join(__dirname, 'routes', '**', '*.js'),
+    ];
 
     const options = {
       definition: {
@@ -60,31 +67,24 @@ if (process.env.SWAGGER !== 'off') {
           description: 'LookToday의 API 문서입니다.',
         },
         servers: [
-          {
-            url: 'http://43.203.195.97:3000',
-            description: 'Production server'
-          },
-          {
-            url: 'http://localhost:3000',
-            description: 'Local development server'
-          }
+          { url: 'http://43.203.195.97:3000', description: 'Production server' },
+          { url: 'http://localhost:3000', description: 'Local development server' },
         ],
         components: {
           securitySchemes: {
-            BearerAuth: {
-              type: 'http',
-              scheme: 'bearer',
-              bearerFormat: 'JWT',
-            },
+            BearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
           },
         },
       },
-      apis: ['./routes/*.js'],
+      apis: swaggerFiles, // ✅ 절대경로 글롭 사용
     };
 
     const specs = swaggerJsdoc(options);
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
-    console.log('[swagger] /api-docs 활성화 (looks.js 제외)');
+    console.log('[swagger] loaded files:', swaggerFiles);
+    console.log('[swagger] path count:', Object.keys(specs.paths || {}).length);
+
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, { explorer: true }));
+    console.log('[swagger] /api-docs 활성화');
   } catch (e) {
     console.warn('[swagger] 비활성화(초기화 실패):', e.message);
   }
