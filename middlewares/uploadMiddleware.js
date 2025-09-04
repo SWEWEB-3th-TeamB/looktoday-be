@@ -1,18 +1,18 @@
 // middlewares/uploadMiddleware.js
 require('dotenv').config();
 const multer = require('multer');
-const multerS3 = require('multer-s3');
+const multerS3 = require('multer-s3-v3');
 const path = require('path');
-const AWS = require('aws-sdk');
+const { S3Client } = require('@aws-sdk/client-s3'); 
 
 // AWS S3 설정
-AWS.config.update({
-    accessKeyId: process.env.S3_KEY_ID,
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-    region: 'ap-northeast-2'
+const s3 = new S3Client({
+    region: 'ap-northeast-2',
+    credentials: {
+        accessKeyId: process.env.S3_KEY_ID,
+        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+    },
 });
-
-const s3 = new AWS.S3();
 
 // multer s3 설정
 const upload = multer({
@@ -39,11 +39,12 @@ const deleteFile = async (imageUrl) => {
     try {
         const url = new URL(imageUrl);
         const key = url.pathname.substring(1); // 맨 앞의 '/' 제거
+        const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
-        await s3.deleteObject({
+        await s3.send(new DeleteObjectCommand({
             Bucket: process.env.S3_BUCKET_NAME,
             Key: key
-        }).promise();
+        }));
         console.log(`S3 파일 삭제 성공: ${key}`);
 
     } catch (error) {
