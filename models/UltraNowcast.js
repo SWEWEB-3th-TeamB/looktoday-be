@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
     vec: { type: DataTypes.FLOAT },
     uuu: { type: DataTypes.FLOAT },
     vvv: { type: DataTypes.FLOAT },
-    pty: { type: DataTypes.STRING(2) },
+    pty: { type: DataTypes.STRING(16) },
     pcp: { type: DataTypes.STRING(16) },
     lgt: { type: DataTypes.FLOAT },
   }, {
