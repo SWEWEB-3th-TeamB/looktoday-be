@@ -22,7 +22,7 @@ const authMiddleware = (req, res, next) => {
     // 토큰 검증
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = {
-      id: decoded.user_id,
+      user_id: decoded.user_id,
       email: decoded.email
     }
 
@@ -43,7 +43,7 @@ const isLoggedIn = (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = {
-      id: decoded.user_id,
+      user_id: decoded.user_id,
       email: decoded.email
     }
     next();

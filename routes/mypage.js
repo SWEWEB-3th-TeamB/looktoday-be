@@ -6,6 +6,13 @@ const authController = require('../controllers/authControllers');
 const db = require('../models');
 const User = db.User;
 
+/**
+ * @swagger
+ * tags:
+ *   name: MyPage
+ *   description: 마이페이지 관련 API
+ */
+
 // 이메일 중복 확인 (GET /api/auth/check-email)
 router.get('/check-email', authController.checkEmail);
 
