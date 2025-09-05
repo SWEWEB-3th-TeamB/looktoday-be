@@ -99,7 +99,7 @@ router.get('/check-email', authController.checkEmail);
  *           type: string
  *         required: true
  *         description: "확인할 유저 닉네임"
- *     responses:f
+ *     responses:   // 수정: f 제거
  *       200:
  *         description: "닉네임 사용 가능 여부"
  *         content:
@@ -435,7 +435,6 @@ router.get('/me', authMiddleware, async (req, res) => {
       error: { detail: err.message }});
   }
 });
-
 
 
 module.exports = router;
