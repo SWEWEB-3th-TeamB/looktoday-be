@@ -6,7 +6,6 @@ const { authMiddleware, isLoggedIn, isNotLoggedIn } = require('../middlewares/au
 const db = require('../models');
 const User = db.User;
 
-const verifyToken = require('../middlewares/authMiddleware');
 const { ApiResponse } = require('../response');
 
 /**
@@ -99,7 +98,7 @@ router.get('/check-email', authController.checkEmail);
  *           type: string
  *         required: true
  *         description: "확인할 유저 닉네임"
- *     responses:   // 수정: f 제거
+ *     responses:
  *       200:
  *         description: "닉네임 사용 가능 여부"
  *         content:
@@ -221,66 +220,66 @@ router.get('/check-username', authController.checkNickname);
  */
 router.post('/signup', isNotLoggedIn, authController.signup);
 
-//로그인 (POST /api/auth/login)
+// 로그인 (POST /api/auth/login)
 /**
  * @swagger
  * /api/auth/login:
- *  post:
- *    summary: "로그인"
- *    tags: [Users]
- *    requestBody:
- *      required: true
- *      content:
- *        application/json
- *        schema:
- *          type: object
- *          properties:
- *            email:
- *              type: string
- *              example: "test@example.com"
- *            password:
- *              type: string
- *              format: password
- *              example: "example123!!"
- *    responses:
- *      200:
- *        description: "로그인 성공"
- *        content:
- *          application/json:
- *            schema:
- *              type: object
- *              properties:
- *                code:
- *                  type: string
- *                message:
- *                  type: string
- *                result:
- *                  type: object
- *                  properties:
- *                    token:
- *                      type: string
- *                      description: "JWT 액세스 토큰"
- *                    user:
- *                      type: object
- *                      properties:
- *                        user_id:
- *                          type: integer
- *                        email:
- *                          type: string
- *                        nickname:
- *                          type: string
- *                        birth:
- *                          type: string
- *      400:
- *        description: "이메일 또는 비밀번호 미입력"
- *      401:
- *        description: "잘못된 이메일 또는 비밀번호"
- *      500:
- *        description: "서버 오류"
+ *   post:
+ *     summary: "로그인"
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: "test@example.com"
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: "example123!!"
+ *     responses:
+ *       200:
+ *         description: "로그인 성공"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                 message:
+ *                   type: string
+ *                 result:
+ *                   type: object
+ *                   properties:
+ *                     token:
+ *                       type: string
+ *                       description: "JWT 액세스 토큰"
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         user_id:
+ *                           type: integer
+ *                         email:
+ *                           type: string
+ *                         nickname:
+ *                           type: string
+ *                         birth:
+ *                           type: string
+ *       400:
+ *         description: "이메일 또는 비밀번호 미입력"
+ *       401:
+ *         description: "잘못된 이메일 또는 비밀번호"
+ *       500:
+ *         description: "서버 오류"
  */
 router.post('/login', isNotLoggedIn, authController.login);
 
-//로그아웃 (Post /api/auth/logout)
+// 로그아웃 (POST /api/auth/logout)
 /**
  * @swagger
  * /api/auth/logout:
@@ -326,7 +325,6 @@ router.post('/login', isNotLoggedIn, authController.login);
  *         description: "서버 오류"
  */
 router.post('/logout', isLoggedIn, authController.logout);
-
 
 // 로그인 상태에서 사용자 정보 가져오기
 /**
@@ -407,34 +405,32 @@ router.post('/logout', isLoggedIn, authController.logout);
  *       500:
  *         description: "서버 오류"
  */
+
 router.get('/me', authMiddleware, async (req, res) => {
   try {
-    // authMiddleware에서 req.user에 토큰 정보(id, email) 넣어줌
     const user = await User.findByPk(req.user.id, {
       attributes: ['user_id', 'email', 'nickname', 'birth', 'si', 'gungu']
     });
 
     if (!user) {
-      return res
-      .status(404)
-      .json(ApiResponse.fail({ 
-        code: "USER404",
-        message: '사용자를 찾을 수 없습니다.',
-        error: {}
-       }));
+      return res.status(404).json(
+        ApiResponse.fail({
+          code: "USER404",
+          message: '사용자를 찾을 수 없습니다.',
+          error: {}
+        })
+      );
     }
 
     res.json(user);
   } catch (err) {
     console.error(err);
-    res
-    .status(500)
-    .json({ 
+    res.status(500).json({
       code: "COMMON500",
       message: '서버 오류입니다.',
-      error: { detail: err.message }});
+      error: { detail: err.message }
+    });
   }
 });
-
 
 module.exports = router;
