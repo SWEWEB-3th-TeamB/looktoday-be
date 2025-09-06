@@ -40,6 +40,7 @@ class Post extends Sequelize.Model {
             like_count: {
                 type: Sequelize.INTEGER,
                 allowNull: false,
+                defaultValue: 0
             },
 
             // 지역(시/도)
