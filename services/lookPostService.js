@@ -3,7 +3,7 @@ const db = require('../models');
 const { Post, Image, UltraNowcast, sequelize, Sequelize } = db;
 const { Op } = Sequelize;
 const { deleteFile } = require('../middlewares/uploadMiddleware');
-const { toBaseDatetime } = require('../utils/dateTime');
+const { toBaseDateTime } = require('../utils/dateTime');
 
 // Custom Error Class
 class ServiceError extends Error {
@@ -15,7 +15,7 @@ class ServiceError extends Error {
 
 // UltraNowCast 조회 함수
 async function findWeather(si, gungu, date, hour) {
-    const { baseDate, baseTime } = toBaseDatetime(date, hour);
+    const { baseDate, baseTime } = toBaseDateTime(date, hour);
     return UltraNowcast.findOne({ where: { si, gungu, baseDate, baseTime } });
 }
 
