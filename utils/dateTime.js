@@ -12,3 +12,5 @@ function toBaseDateTime(dateStr, hourStr) {
     const H = String(dt.getHours()).padStart(2, '0');
     return { baseDate: `${Y}${M}${D}`, baseTime: `${H}00` };
 }
+
+module.exports = { toBaseDateTime };
