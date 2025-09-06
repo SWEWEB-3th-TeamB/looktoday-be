@@ -66,7 +66,8 @@ exports.createPost = async (user, body, file) => {
         comment,
         date,
         hour,
-        weather_id: weatherRow ? weatherRow.id : null // 없으면 null
+        weather_id: weatherRow ? weatherRow.id : null, // 없으면 null
+        like_count: 0,
     });
 
     // 이미지와 포스트 연결
