@@ -1,5 +1,6 @@
 // controllers/lookPostControllers.js
 const lookPostService = require('../services/lookPostService');
+const { ApiResponse } = require('../response');
 
 // POST /api/lookPost — 이미지 + 게시글 업로드
 exports.createPost = async (req, res) => {
@@ -13,20 +14,19 @@ exports.createPost = async (req, res) => {
     try {
         const result = await lookPostService.createPost(req.user, req.body, req.file);
 
-        return res.status(201).json({
-            success: true,
-            ...result,
-            message: '포스트가 성공적으로 업로드되었습니다.'
-        });
+        return res.status(201).json(ApiResponse.success({
+            message: '포스트가 성공적으로 업로드되었습니다.',
+            result
+        }));
 
     } catch (error) {
         console.error(error);
         const statusCode = error.statusCode || 500;
-        const message = error.message || "서버 오류로 인해 업로드에 실패했습니다.";
-        return res.status(statusCode).json({
-            success: false,
-            message
-        });
+        
+        return res.status(statusCode).json(ApiResponse.fail({
+            message: error.message || "서버 오류로 인해 업로드에 실패했습니다.",
+            error
+        }));
     }
 };
 
@@ -37,19 +37,18 @@ exports.updatePost = async (req, res) => {
 
         await lookPostService.updatePost(looktoday_id, req.user, req.body, req.file);
 
-        return res.status(200).json({
-            success: true,
-            message: "게시물이 성공적으로 수정되었습니다.",
-        });
+        return res.status(200).json(ApiResponse.success({
+            message: `게시물 ${looktoday_id}이 성공적으로 수정되었습니다.`
+        }));
 
     } catch (error) {
         console.error(error);
         const statusCode = error.statusCode || 500;
-        const message = error.message || "서버 에러가 발생했습니다.";
-        return res.status(statusCode).json({
-            success: false,
-            message
-        });
+
+        return res.status(statusCode).json(ApiResponse.fail({
+            message: error.message || "서버 에러가 발생했습니다.",
+            error
+        }));
     }
 };
 
@@ -59,18 +58,17 @@ exports.deletePost = async (req, res) => {
         const { looktoday_id } = req.params;
         await lookPostService.deletePost(looktoday_id, req.user);
 
-        return res.status(200).json({
-            success: true,
+        return res.status(200).json(ApiResponse.success({
             message: `게시물 ${looktoday_id}이 성공적으로 삭제되었습니다.`
-        });
+        }));
 
     } catch (error) {
         console.error(error);
         const statusCode = error.statusCode || 500;
-        const message = error.message || "서버 에러가 발생했습니다.";
-        return res.status(statusCode).json({
-            success: false,
-            message
-        });
+
+        return res.status(statusCode).json(ApiResponse.fail({
+            message: error.message || "서버 에러가 발생했습니다.",
+            error
+        }));
     }
 };
