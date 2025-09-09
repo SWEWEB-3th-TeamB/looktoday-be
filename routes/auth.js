@@ -163,34 +163,34 @@ router.get('/check-username', authController.checkNickname);
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
- *           schema:
+ *          application/json:
+ *            schema:
  *             type: object
  *             properties:
  *               email:
  *                 type: string
- *                 example: "test@example.com"
+ *                 example: ""
  *               password:
  *                 type: string
- *                 example: "example123!!"
+ *                 example: ""
  *                 description: "특수문자 포함, 8자 이상"
  *               confirmPassword:
  *                 type: string
- *                 example: "example123!!"
+ *                 example: ""
  *                 description: "비밀번호 확인 (특수문자 포함, 8자 이상)"
  *               nickname:
  *                 type: string
- *                 example: "홍길동"
+ *                 example: ""
  *               birth:
  *                 type: string
- *                 example: "2006/12/25"
+ *                 example: ""
  *                 description: "YYYY/MM/DD 형식"
  *               si:
  *                 type: string
- *                 example: "서울특별시"
+ *                 example: ""
  *               gungu:
  *                 type: string
- *                 example: "노원구"
+ *                 example: ""
  *     responses:
  *       201:
  *         description: "회원가입 성공"
@@ -245,8 +245,8 @@ router.post('/signup', isNotLoggedIn, authController.signup);
  *       200:
  *         description: "로그인 성공"
  *         content:
- *           application/json:
- *             schema:
+ *            application/json:
+ *              schema:
  *               type: object
  *               properties:
  *                 code:
@@ -292,8 +292,8 @@ router.post('/login', isNotLoggedIn, authController.login);
  *       200:
  *         description: "로그아웃 성공"
  *         content:
- *           application/json:
- *             schema:
+ *            application/json:
+ *              schema:
  *               type: object
  *               properties:
  *                 code:
@@ -308,8 +308,8 @@ router.post('/login', isNotLoggedIn, authController.login);
  *       401:
  *         description: "로그인 상태가 아님"
  *         content:
- *           application/json:
- *             schema:
+ *            application/json:
+ *              schema:
  *               type: object
  *               properties:
  *                 code:
@@ -339,8 +339,8 @@ router.post('/logout', isLoggedIn, authController.logout);
  *       200:
  *         description: "사용자 정보 조회 성공"
  *         content:
- *           application/json:
- *             schema:
+ *            application/json:
+ *              schema:
  *               type: object
  *               properties:
  *                 code:
@@ -373,8 +373,8 @@ router.post('/logout', isLoggedIn, authController.logout);
  *       401:
  *         description: "JWT 토큰 누락/유효하지 않음"
  *         content:
- *           application/json:
- *             schema:
+ *            application/json:
+ *              schema:
  *               type: object
  *               properties:
  *                 code:
@@ -389,8 +389,8 @@ router.post('/logout', isLoggedIn, authController.logout);
  *       404:
  *         description: "사용자 없음"
  *         content:
- *           application/json:
- *             schema:
+ *            application/json:
+ *              schema:
  *               type: object
  *               properties:
  *                 code:
