@@ -63,7 +63,10 @@ exports.getLooks = async (req, res) => {
       order: [sort === 'popular' ? ['like_count', 'DESC'] : ['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset: (page - 1) * parseInt(limit),
-      include: [{ model: Image, attributes: ['imageUrl'] }],
+      include: [
+        { model: Image, attributes: ['imageUrl'] },
+        { model: User, attributes: ['nickname'] }
+      ],
       distinct: true
     });
     
@@ -90,7 +93,10 @@ exports.getBestLooks = async (req, res) => {
         const bestLooks = await Post.findAll({
             order: [['like_count', 'DESC']], 
             limit: 10,
-            include: [{ model: Image, attributes: ['imageUrl'] }]
+            include: [
+              { model: Image, attributes: ['imageUrl'] },
+              { model: User, attributes: ['nickname'] }
+            ]
         });
 
         return res.status(200).json(ApiResponse.success({ message: "인기 게시물(Best 10) 조회 성공", result: bestLooks }));
