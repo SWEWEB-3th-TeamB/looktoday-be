@@ -35,7 +35,10 @@ module.exports = cron.schedule('20 * * * *', async () => {
             try {
                 const weatherRow = await findWeatherBySlot(p.si, p.gungu, p.date, p.hour);
                 if (weatherRow) {
-                    await p.update({ weather_id: weatherRow.id });
+                    await p.update({ 
+                        weather_id: weatherRow.id,
+                        temperature: weatherRow.temperature
+                    });
                     console.log(`[Cron] Post ${p.looktoday_id} → 날씨 보정 완료`);
                 }
             } catch (error) {
