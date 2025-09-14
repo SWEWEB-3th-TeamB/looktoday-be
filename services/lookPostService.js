@@ -201,9 +201,10 @@ exports.deletePost = async (looktoday_id, user) => {
         }
 
     } catch (error) {
-        if ( !transactionFinished && t) await t.rollback(); // 트랜잭션 롤백
-        if (error instanceof ServiceError) {
-            throw error;
+        if ( !transactionFinished) {
+            try { await t.rollback(); }
+            catch (rollbackError) { console.error("트랜잭션 롤백 실패:", rollbackError); }
+            finally { transactionFinished = true; }
         }
         throw error;
     }
