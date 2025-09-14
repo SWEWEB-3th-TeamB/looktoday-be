@@ -408,7 +408,7 @@ router.post('/logout', isLoggedIn, authController.logout);
 
 router.get('/me', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id, {
+    const user = await User.findByPk(req.user.user_id, {
       attributes: ['user_id', 'email', 'nickname', 'birth', 'si', 'gungu']
     });
 
