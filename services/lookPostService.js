@@ -148,6 +148,7 @@ exports.updatePost = async (looktoday_id, user, body, file) => {
 exports.deletePost = async (looktoday_id, user) => {
     // 데이터 일관성을 위한 트랜잭션 시작
     const t = await sequelize.transaction();
+    let transactionFinished = false; // 트랜잭션 상태 확인 변수 
     try {
         //삭제할 게시물을 트랜잭션 안에서 조회
         const post = await Post.findOne({
@@ -158,12 +159,14 @@ exports.deletePost = async (looktoday_id, user) => {
         // 게시물 존재 확인
         if (!post) {
             await t.rollback(); // 트랜잭션 롤백
+            transactionFinished = true;
             throw new ServiceError("게시물이 존재하지 않습니다.", 404);
         }
 
         // 권한 확인
         if (post.user_id !== user.user_id) {
             await t.rollback(); // 트랜잭션 롤백
+            transactionFinished = true;
             throw new ServiceError("삭제 권한이 없습니다.", 403);
         }
 
@@ -187,13 +190,18 @@ exports.deletePost = async (looktoday_id, user) => {
         );
 
         await t.commit(); // 트랜잭션 커밋
+        transactionFinished = true;
 
         for (const image of images) {
-            await deleteFile(image.imageUrl); // commit 후 S3 파일 삭제
+            try {
+                await deleteFile(image.imageUrl); // commit 후 S3 파일 삭제
+            } catch (error) {
+                console.error(`S3 삭제 실패: ${looktoday_id}`, error);
+            }
         }
 
     } catch (error) {
-        if (t) await t.rollback(); // 트랜잭션 롤백
+        if ( !transactionFinished && t) await t.rollback(); // 트랜잭션 롤백
         if (error instanceof ServiceError) {
             throw error;
         }
