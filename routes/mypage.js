@@ -226,40 +226,6 @@ router.get('/me/feeds', mypageController.getMyFeeds);
 router.get('/me/likes', mypageController.getMyLikes);
 
 
-// 내 게시글 삭제
-/**
- * @swagger
- * /api/users/posts/{looktoday_id}:
- *   delete:
- *     summary: "내 게시글 삭제"
- *     tags: [MyPage]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: looktoday_id
- *         required: true
- *         schema:
- *           type: integer
- *         description: "삭제할 게시글 ID"
- *     responses:
- *       200:
- *         description: "삭제 성공"
- *         content:
- *           application/json:
- *             example:
- *               code: "LOOK200"
- *               message: "게시물이 삭제되었습니다."
- *       404:
- *         description: "게시글을 찾을 수 없음"
- *         content:
- *           application/json:
- *             example:
- *               code: "LOOK404"
- *               message: "해당 게시물을 찾을 수 없습니다."
- *       500:
- *         description: "서버 오류"
- */
-router.delete('/posts/:looktoday_id', mypageController.deleteMyLook);
+
 
 module.exports = router;

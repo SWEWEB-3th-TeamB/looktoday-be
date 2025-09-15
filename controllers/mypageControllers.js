@@ -367,6 +367,7 @@ exports.getMyLikes = async (req, res) => {
       myLikes,
     },
     });
+
   } catch (err) {
     console.error(err);
     return res
@@ -379,51 +380,7 @@ exports.getMyLikes = async (req, res) => {
   }
 };
 
-// 내 룩 삭제하기
-exports.deleteMyLook = async (req, res) => {
-  try {
 
-    const { looktoday_id } = req.params;
-
-    // 내가 쓴 글인지 확인
-    const post = await Post.findOne({
-      where: { looktoday_id, user_id: req.user.id },
-      include: [{ model: db.Image, as: 'Image' }], // 모델 import 맞게 확인
-    });
-
-    if (!post) {
-      return res
-      .status(404)
-      .json({
-        code: "LOOK404",
-        message: '해당 게시물을 찾을 수 없습니다.',
-        error: {}
-      });
-    }
-
-    // post에 연결된 이미지도 삭제
-    if (post.Image) { 
-      await post.Image.destroy(); // 1개니까 반복문 필요 없음
-    }
-
-    // post 삭제 (DB에서 완전 삭제)
-    await post.destroy({ force: true }); // 물리삭제
-
-    return res
-    .status(200)
-    .json({
-      code: "LOOK200",
-      message: '게시물이 삭제되었습니다.',
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({
-      code: "COMMON500",
-      message: '서버 오류입니다.',
-      error: { detail: err.message }
-    });
-  }
-};
 
 
 

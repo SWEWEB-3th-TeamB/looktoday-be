@@ -305,3 +305,79 @@ exports.logout = async (req, res) => {
             error: { detail: err.message } }));
     }
 };
+
+// --- 1단계: 사용자 확인 컨트롤러 함수 (POST /api/auth/verify-user) ---
+exports.verifyUser = async (req, res) => {
+    const { email, birth } = req.body;
+    const parsedBirth = new Date(birth);
+
+    const user = await User.findOne({ where: { email, birth: parsedBirth } });
+    if (!user) {
+        return res
+        .status(404)
+        .json(ApiResponse.fail({
+            code: "USER404",
+            message: "이메일 또는 생년월일이 일치하지 않습니다.",
+            error: {}
+         }));
+    }
+
+    // 세션에 사용자 정보 저장
+    req.session.resetUser = { email, birth: parsedBirth };
+
+    return res
+    .status(200)
+    .json(ApiResponse.success({ 
+        code: "USER200",
+        message: "사용자 확인 완료",
+        error: {} }));
+};
+
+// --- 2단계: 비밀번호 변경 컨트롤러 함수 (POST /api/auth/reset-password) ---
+exports.resetPassword = async (req, res) => {
+    const { newPassword, confirmPassword } = req.body;
+
+    if (!req.session.resetUser) {
+        return res
+        .status(400)
+        .json(ApiResponse.fail({ 
+            code: "USER400",
+            message: "사용자 확인이 필요합니다.",
+            error: {} }));
+    }
+
+    const { email, birth } = req.session.resetUser;
+
+    const user = await User.findOne({ where: { email, birth } });
+    if (!user) {
+        return res
+        .status(404)
+        .json(ApiResponse.fail({ 
+            code: "USER404",
+            message: "사용자를 찾을 수 없습니다.",
+            error: {} }));
+    }
+
+    if (newPassword !== confirmPassword) {
+        return res
+        .status(400)
+        .json(ApiResponse.fail({ 
+            code: "USER400",
+            message: "비밀번호가 일치하지 않습니다.",
+            error: {} }));
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    // 세션 제거
+    delete req.session.resetUser;
+
+    return res
+    .status(200)
+    .json(ApiResponse.success({ 
+        code: "USER200",
+        message: "비밀번호 변경 완료",
+        error: {} }));
+};
