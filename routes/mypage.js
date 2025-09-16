@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, isLoggedIn, isNotLoggedIn } = require('../middlewares/authMiddleware');
 const mypageController = require('../controllers/mypageControllers');
 const authController = require('../controllers/authControllers');
 const db = require('../models');
@@ -19,8 +19,7 @@ router.get('/check-email', authController.checkEmail);
 // 닉네임 중복 확인 (GET /api/auth/check-username)
 router.get('/check-username', authController.checkNickname);
 
-// 모든 마이페이지 API는 로그인 필수
-router.use(authMiddleware);
+
 
 // 내 프로필 수정
 /**
@@ -86,7 +85,7 @@ router.use(authMiddleware);
  *       500:
  *         description: "서버 오류"
  */
-router.put('/me', mypageController.updateProfile);
+router.put('/me', isLoggedIn, mypageController.updateProfile);
 
 // 내 피드(내가 올린 게시글) 조회 + 기간/월/날짜범위 필터 + 페이징
 /**
@@ -157,7 +156,7 @@ router.put('/me', mypageController.updateProfile);
  *       500:
  *         description: "서버 오류"
  */
-router.get('/me/feeds', mypageController.getMyFeeds);
+router.get('/me/feeds',isLoggedIn, mypageController.getMyFeeds);
 
 // 내 좋아요한 게시글 목록
 /**
@@ -223,43 +222,9 @@ router.get('/me/feeds', mypageController.getMyFeeds);
  *         description: "서버 오류"
  */
 
-router.get('/me/likes', mypageController.getMyLikes);
+router.get('/me/likes',isLoggedIn, mypageController.getMyLikes);
 
 
-// 내 게시글 삭제
-/**
- * @swagger
- * /api/users/posts/{looktoday_id}:
- *   delete:
- *     summary: "내 게시글 삭제"
- *     tags: [MyPage]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: looktoday_id
- *         required: true
- *         schema:
- *           type: integer
- *         description: "삭제할 게시글 ID"
- *     responses:
- *       200:
- *         description: "삭제 성공"
- *         content:
- *           application/json:
- *             example:
- *               code: "LOOK200"
- *               message: "게시물이 삭제되었습니다."
- *       404:
- *         description: "게시글을 찾을 수 없음"
- *         content:
- *           application/json:
- *             example:
- *               code: "LOOK404"
- *               message: "해당 게시물을 찾을 수 없습니다."
- *       500:
- *         description: "서버 오류"
- */
-router.delete('/posts/:looktoday_id', mypageController.deleteMyLook);
+
 
 module.exports = router;

@@ -49,7 +49,7 @@ exports.getLooks = async (req, res) => {
   try {
     const { sort = 'latest', page = 1, limit = 20, sido, gungu, date, weather, minTemp, maxTemp } = req.query;
 
-    const where = {};
+    const where = {isPublic: true};
     if (sido) where.sido = sido;
     if (gungu) where.gungu = gungu;
     if (date) where.date = { [Op.eq]: new Date(date) };
