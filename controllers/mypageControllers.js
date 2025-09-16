@@ -63,7 +63,7 @@ exports.updateProfile = async (req, res) => {
     try {
         const { email,currentPassword, newPassword, confirmPassword, nickname, birth, si, gungu} = req.body;
 
-        const me = await User.findByPk(req.user.id);
+        const me = await User.findByPk(req.user.user_id);
         if (!me) return res
         .status(404)
         .json(ApiResponse.fail({ 
@@ -212,7 +212,7 @@ exports.getMyFeeds = async (req, res) => {
     const { page, limit, offset } = getPaging(req);
     const dataFilter = buildDateFilter(req.query);
 
-    const whereClause = { user_id: req.user.id, ...dataFilter };
+    const whereClause = { user_id: req.user.user_id, ...dataFilter };
 
     const { rows, count } = await Post.findAndCountAll({
       where: whereClause,
@@ -239,7 +239,7 @@ exports.getMyFeeds = async (req, res) => {
       rows.map(async (l) => {
         const likeCount = await Like.count({ where: { looktoday_id: l.looktoday_id } });
         const isLiked = await Like.findOne({
-          where: { looktoday_id: l.looktoday_id, user_id: req.user.id }
+          where: { looktoday_id: l.looktoday_id, user_id: req.user.user_id }
         }).then((x) => !!x);
 
         return {
@@ -302,7 +302,7 @@ exports.getMyLikes = async (req, res) => {
     const { page, limit, offset } =getPaging(req);
     const dataFilter = buildDateFilter(req.query);
 
-    const whereClause = { user_id: req.user.id, ...dataFilter };
+    const whereClause = { user_id: req.user.user_id, ...dataFilter };
 
     const {rows, count} = await Like.findAndCountAll({
       include: [
