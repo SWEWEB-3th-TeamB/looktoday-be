@@ -245,8 +245,8 @@ router.post('/signup', isNotLoggedIn, authController.signup);
  *       200:
  *         description: "로그인 성공"
  *         content:
- *            application/json:
- *              schema:
+ *           application/json:
+ *             schema:
  *               type: object
  *               properties:
  *                 code:
@@ -292,8 +292,8 @@ router.post('/login', isNotLoggedIn, authController.login);
  *       200:
  *         description: "로그아웃 성공"
  *         content:
- *            application/json:
- *              schema:
+ *           application/json:
+ *             schema:
  *               type: object
  *               properties:
  *                 code:
@@ -308,8 +308,8 @@ router.post('/login', isNotLoggedIn, authController.login);
  *       401:
  *         description: "로그인 상태가 아님"
  *         content:
- *            application/json:
- *              schema:
+ *           application/json:
+ *             schema:
  *               type: object
  *               properties:
  *                 code:
@@ -339,8 +339,8 @@ router.post('/logout', isLoggedIn, authController.logout);
  *       200:
  *         description: "사용자 정보 조회 성공"
  *         content:
- *            application/json:
- *              schema:
+ *           application/json:
+ *             schema:
  *               type: object
  *               properties:
  *                 code:
@@ -373,9 +373,9 @@ router.post('/logout', isLoggedIn, authController.logout);
  *       400:
  *         description: "JWT 토큰 누락/유효하지 않음"
  *         content:
- *            application/json:
- *              schema:
- *               type: object
+ *           application/json:
+ *             schema:
+ *               type: object 
  *               properties:
  *                 code:
  *                   type: string
@@ -389,8 +389,8 @@ router.post('/logout', isLoggedIn, authController.logout);
  *       404:
  *         description: "사용자 없음"
  *         content:
- *            application/json:
- *              schema:
+ *           application/json:
+ *             schema:
  *               type: object
  *               properties:
  *                 code:
@@ -422,7 +422,14 @@ router.get('/me', authMiddleware, async (req, res) => {
       );
     }
 
-    res.json(user);
+    res.json(
+      ApiResponse.success({
+        code: "USER200",
+        message: '사용자 정보 조회 성공',
+        result: user
+      })
+    );
+    
   } catch (err) {
     console.error(err);
     res.status(500).json({
@@ -475,17 +482,17 @@ router.get('/me', authMiddleware, async (req, res) => {
  *                   example: "사용자 확인 완료"
  *       400:
  *         description: "사용자를 찾을 수 없음"
- *           content:
- *             application/json:
- *               schema:
- *                 type: string
- *                 properties:
- *                   code:
- *                     type: string
- *                     example: "USER400"
- *                   message:
- *                     type: string
- *                     example: "사용자를 찾을 수 없음"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "USER400"
+ *                 message:
+ *                   type: string
+ *                   example: "사용자를 찾을 수 없음"
  *       500:
  *         description: "서버 오류"
  */
@@ -544,17 +551,17 @@ router.post('/verify-user', isNotLoggedIn, authController.verifyUser);
  *                   example: "사용자 확인이 필요합니다."
  *       404:
  *         description: "사용자를 찾을 수 없음"
- *           content:
- *             application/json:
- *               schema:
- *                 type: string
- *                 properties:
- *                   code:
- *                     type: string
- *                     example: "USER404"
- *                   message:
- *                     type: string
- *                     example: "사용자를 찾을 수 없거나 비밀번호가 일치하지 않습니다."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "USER404"
+ *                 message:
+ *                   type: string
+ *                   example: "사용자를 찾을 수 없거나 비밀번호가 일치하지 않습니다."
  *       500:
  *         description: "서버 오류"
  */
