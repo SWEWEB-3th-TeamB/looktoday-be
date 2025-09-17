@@ -370,7 +370,7 @@ router.post('/logout', isLoggedIn, authController.logout);
  *                     gungu:
  *                       type: string
  *                       example: "노원구"
- *       401:
+ *       400:
  *         description: "JWT 토큰 누락/유효하지 않음"
  *         content:
  *            application/json:
@@ -379,7 +379,7 @@ router.post('/logout', isLoggedIn, authController.logout);
  *               properties:
  *                 code:
  *                   type: string
- *                   example: "AUTH401"
+ *                   example: "AUTH400"
  *                 message:
  *                   type: string
  *                   example: "인증에 실패했습니다."
@@ -436,95 +436,129 @@ router.get('/me', authMiddleware, async (req, res) => {
 // 1단계: 사용자 확인 (POST /api/auth/verify-user)
 /**
  * @swagger
- *  /api/auth/verify-user
- *    post:
- *      summary: 1단계 - 사용자 확인
- *      tags: [Users]
- *      description: "이메일과 생년월일을 입력하면 사용자가 존재하는지 확인"
- *      requestBody:
- *        required: true
- *        content:
- *          application/json:
- *          schema:
- *            type: object
- *            required:
- *              - email
- *              - birth
- *            properties:
- *              email:
- *                type: string
- *                format: email
- *                example: "test@example.com"
- *              birth:
- *                type: string
- *                description: YYYY/MM/DD 형식
- *                example: "2006/12/25"
- *      responses:
- *        200:
- *          description: "사용자 확인 완료"
- *          content:
- *            application/json:
- *              schema:
- *                type: object
- *                properties
- *                  code:
- *                    type: string
- *                    example: "USER200"
- *                  message:
- *                    type: string
- *                    example: "사용자 확인 완료"
- *        400:
- *          description: "사용자를 찾을 수 없음"
- *        404:
- *          description: "서버 오류"
+ * /api/auth/verify-user:
+ *   post:
+ *     summary: "1단계 - 사용자 확인"
+ *     tags: [Users]
+ *     description: "이메일과 생년월일을 입력하면 사용자가 존재하는지 확인"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - birth
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "test@example.com"
+ *               birth:
+ *                 type: string
+ *                 description: "YYYY/MM/DD 형식"
+ *                 example: "2006/12/25"
+ *     responses:
+ *       200:
+ *         description: "사용자 확인 완료"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "USER200"
+ *                 message:
+ *                   type: string
+ *                   example: "사용자 확인 완료"
+ *       400:
+ *         description: "사용자를 찾을 수 없음"
+ *           content:
+ *             application/json:
+ *               schema:
+ *                 type: string
+ *                 properties:
+ *                   code:
+ *                     type: string
+ *                     example: "USER400"
+ *                   message:
+ *                     type: string
+ *                     example: "사용자를 찾을 수 없음"
+ *       500:
+ *         description: "서버 오류"
  */
 router.post('/verify-user', isNotLoggedIn, authController.verifyUser);
 
 // 2단계: 비밀번호 변경 (POST /api/auth/reset-password)
 /**
  * @swagger
- *  /api/auth/reset-password:
- *    post:
- *      summary: "비밀번호 재설정"
- *      tags: [Users]
- *      description:  "사용자 확인 후 새 비밀번호를 입력하여 비밀번호를 변경. 세션 기반 사용자 확인 필요."
- *      requestBody:
- *        required: true
- *        content:
- *          application/json:
- *          schema:
- *            type: object
- *            required:
- *              - newPassword
- *              - confirmPassword
- *            properties:
- *              newPassword:
- *                type: string
- *                example: "NewPassword123@"
- *              confirmNewPassword:
- *                type: string
- *                example: "NewPassword123@"
- *      responses:
- *        200:
- *          description: "비밀번호 변경 완료"
- *            content:
- *              application/json:
- *                schema:
- *                  type: object
- *                  properties:
- *                    code:
- *                      type: string
- *                      example: "USER200"
- *                    message:
- *                      type: string
- *                      example: "비밀번호 변경 완료"
- *        400:
- *          description: "잘못된 요청 (세션 없음, 비밀번호 불일치 등)"
- *        404:
- *          description: "사용자를 찾을 수 없음"
- *        500:
- *          description: "서버 오류"
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: "비밀번호 재설정"
+ *     tags: [Users]
+ *     description: "사용자 확인 후 새 비밀번호를 입력하여 비밀번호를 변경. 세션 기반 사용자 확인 필요."
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newPassword
+ *               - confirmPassword
+ *             properties:
+ *               newPassword:
+ *                 type: string
+ *                 example: "NewPassword123@"
+ *               confirmPassword:
+ *                 type: string
+ *                 example: "NewPassword123@"
+ *     responses:
+ *       200:
+ *         description: "비밀번호 변경 완료"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "USER200"
+ *                 message:
+ *                   type: string
+ *                   example: "비밀번호 변경 완료"
+ *       400:
+ *         description: "잘못된 요청 (세션 없음, 비밀번호 불일치 등)"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "USER400"
+ *                 message:
+ *                   type: string
+ *                   example: "사용자 확인이 필요합니다."
+ *       404:
+ *         description: "사용자를 찾을 수 없음"
+ *           content:
+ *             application/json:
+ *               schema:
+ *                 type: string
+ *                 properties:
+ *                   code:
+ *                     type: string
+ *                     example: "USER404"
+ *                   message:
+ *                     type: string
+ *                     example: "사용자를 찾을 수 없거나 비밀번호가 일치하지 않습니다."
+ *       500:
+ *         description: "서버 오류"
  */
 router.post('/reset-password', isNotLoggedIn, authController.resetPassword);
+
 
 module.exports = router;
