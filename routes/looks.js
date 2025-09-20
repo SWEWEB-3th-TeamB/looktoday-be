@@ -91,6 +91,56 @@ router.get('/', looksControllers.getLooks);
  */
 router.get('/best', looksControllers.getBestLooks);
 
+// GET /api/looks/me - 내 게시물 조회
+/**
+ * @swagger
+ * /api/looks/me:
+ *   get:
+ *     summary: "내 룩 목록 조회 (마이 피드)"
+ *     tags: [Looks]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: "페이지 번호"
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: "한 페이지에 보여줄 게시물 수"
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [12m, last_month, prev_month]
+ *         description: "기간 필터 (12m: 최근 12개월, last_month: 저번달, prev_month: 저저번달)"
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: "사용자 지정 기간 시작일 (YYYY-MM-DD)"
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: "사용자 지정 기간 종료일 (YYYY-MM-DD)"
+ *     responses:
+ *       "200":
+ *         description: "내 룩 목록 조회 성공"
+ *       "401":
+ *         description: "인증 실패"
+ *       "500":
+ *         description: "서버 오류"
+ */
+router.get('/me', authMiddleware, looksControllers.getMine);
+
 // GET /api/looks/:looktoday_id - 게시물 상세 조회
 /**
  * @swagger
