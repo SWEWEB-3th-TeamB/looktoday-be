@@ -33,14 +33,14 @@ function buildDateFilter(query) {
   }
   // 지난 달
   else if (period === 'last-month') {
-    start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
-    end = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-  }
-  // 이번 달
-  else if (period === 'this-month') {
-    start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-    end = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
-  }
+  start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
+  end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59); // 지난 달 마지막 날
+}
+  // 지지난 달
+  else if (period === 'two-months-ago') {
+  start = new Date(now.getFullYear(), now.getMonth() - 2, 1, 0, 0, 0);
+  end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59); // 지지난 달 마지막 날
+}
   // 달력 선택
   else if (dateFrom || dateTo) {
     start = dateFrom ? new Date(dateFrom + 'T00:00:00') : new Date();
@@ -52,6 +52,9 @@ function buildDateFilter(query) {
     if (end > now) {
       end = now; // 미래 선택 방지
     }
+  } else {
+    start = fiveYearsAgo;
+    end = now;
   }
 
 
@@ -218,7 +221,7 @@ exports.getMyFeeds = async (req, res) => {
       where: whereClause,
       attributes: [
         'looktoday_id',
-        'sido',          // 시/도
+        'si',          // 시/도
         'gungu',         // 군/구
         'apparent_temp', // 체감온도
         'apparent_humidity', // 체감습도
@@ -245,7 +248,7 @@ exports.getMyFeeds = async (req, res) => {
         return {
           looktoday_id: l.looktoday_id,
           imageUrl: l.Image ? l.Image.imageUrl : null,
-          sido: l.sido,
+          si: l.si,
           gungu: l.gungu,
           apparent_temp: l.apparent_temp,
           apparent_humidity: l.apparent_humidity,
@@ -258,7 +261,7 @@ exports.getMyFeeds = async (req, res) => {
     );
 
     // 어떤 필터를 사용했는지
-    let filter = { type: 'period', value: '12m' };
+    let filter = { type: 'period', value: '5y' };
     if (req.query.month) filter = { type: 'month', value: req.query.month };
     else if (req.query.dateFrom || req.query.dateTo) {
       filter = {
@@ -308,7 +311,7 @@ exports.getMyLikes = async (req, res) => {
       include: [
         {
           model: Post,
-          attributes: ['looktoday_id', 'sido', 'gungu', 'apparent_temp', 'createdAt'],
+          attributes: ['looktoday_id', 'si', 'gungu', 'apparent_temp', 'createdAt'],
           include: [
             { model: Image, attributes: ['imageUrl'] },
             { model: User, attributes: ['nickname'] },
@@ -330,7 +333,7 @@ exports.getMyLikes = async (req, res) => {
         return {
           looktoday_id: post.looktoday_id,
           imageUrl: post.Image?.imageUrl || null,
-          sido: post.sido,
+          si: post.si,
           gungu: post.gungu,
           weather: post.apparent_temp,
           likeCount,
@@ -340,7 +343,7 @@ exports.getMyLikes = async (req, res) => {
     );
 
         // 어떤 필터를 사용했는지
-    let filter = { type: 'period', value: '12m' };
+    let filter = { type: 'period', value: '5y' };
     if (req.query.month) filter = { type: 'month', value: req.query.month };
     else if (req.query.dateFrom || req.query.dateTo) {
       filter = {
