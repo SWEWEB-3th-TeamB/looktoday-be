@@ -13,16 +13,12 @@ class Post extends Sequelize.Model {
             //사용자 식별번호 (외래 키)
             user_id: {
                 type: Sequelize.INTEGER,
-                allowNull: false,
-             /*   references: { // 참조
-                    model: 'users',
-                    key: 'user_id'
-                } */
+                allowNull: false
             },
             //사용자가 작성한 룩투데이 게시글 수
             post_count: {
                 type: Sequelize.INTEGER,
-                allowNull: false,
+                allowNull: false
             },
             // 날짜만
             date: {
@@ -52,12 +48,12 @@ class Post extends Sequelize.Model {
             // 지역(군/구)
             gungu: {
                 type: Sequelize.STRING(20),
-                allowNull: true,
+                allowNull: true
             },
             // 온도 
             temperature: {
                  type: DataTypes.FLOAT,
-                allowNull: true,
+                allowNull: true
             },
             // 체감온도
             apparent_temp: {
@@ -82,11 +78,7 @@ class Post extends Sequelize.Model {
             // 날씨 Id
             weather_id: {
                 type: Sequelize.BIGINT,
-                allowNull: true,
-                /* references: {
-                    model: 'weather',
-                    key: 'id'
-                } */
+                allowNull: true
             }
         }, {
             sequelize,
@@ -104,7 +96,7 @@ class Post extends Sequelize.Model {
         // Post 모델은 User 모델에 속해있음 // eunseo 이미지 여러장 붙일 계획이면 hasMany 고려
         db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'user_id' });
         db.Post.hasOne(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
-        db.Post.belongsTo(db.Weather, { foreignKey: 'weather_id', targetKey: 'id', as: 'weatherInfo' });
+        // db.Post.belongsTo(db.Weather, { foreignKey: 'weather_id', targetKey: 'id', as: 'weatherInfo' });
         db.Post.hasOne(db.Like, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
     }
 }
