@@ -37,9 +37,9 @@ function buildDateFilter(query) {
   end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59); // 지난 달 마지막 날
 }
   // 지지난 달
-  else if (period === 'last-month') {
+  else if (period === 'two-months-ago') {
   start = new Date(now.getFullYear(), now.getMonth() - 2, 1, 0, 0, 0);
-  end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59); // 지난 달 마지막 날
+  end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59); // 지지난 달 마지막 날
 }
   // 달력 선택
   else if (dateFrom || dateTo) {
