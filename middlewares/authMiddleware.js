@@ -100,4 +100,5 @@ const isNotLoggedIn = (req, res, next) => {
   }
 };
 
-module.exports = { authMiddleware, isLoggedIn, isNotLoggedIn };
+//  수정: routes/user.js에서 { verifyToken }로 가져올 수 있도록 별칭 추가
+module.exports = { authMiddleware, isLoggedIn, isNotLoggedIn, verifyToken: authMiddleware };
