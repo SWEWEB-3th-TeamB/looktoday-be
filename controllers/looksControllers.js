@@ -1,50 +1,35 @@
-const { Post, Like, Image, User, Weather } = require('../models');
+const { Post, Like, Image, User, Weather, UltraNowcast } = require('../models');
 const { ApiResponse } = require('../response');
 const { Op } = require('sequelize');
-const locationMap = require('../data/locationMap');
 
-// --- weatherNow.js에서 가져온 헬퍼 함수들 ---
-const PTY_LABEL = { '0': '강수 없음', '1': '비', '2': '비/눈', '3': '눈', '4': '소나기', '5': '빗방울', '6': '빗방울/눈날림', '7': '눈날림' };
-const LABELS = { T1H: { key: '기온', unit: '℃' }, REH: { key: '습도', unit: '%' }, PTY: { key: '강수형태', unit: '' }, RN1: { key: '1시간강수량', unit: 'mm' }, WSD: { key: '풍속', unit: 'm/s' } };
-const getNxNy = (si, gungu) => (locationMap[si] || []).find(d => d.district === gungu) || null;
-const buildWeatherPayload = (items) => {
-  const byCat = {};
-  for (const it of items) byCat[it.category] = String(it.obsrValue);
-  const summary = {};
-  for (const [cat, conf] of Object.entries(LABELS)) {
-    if (byCat[cat] == null) continue;
-    summary[conf.key] = cat === 'PTY' ? (PTY_LABEL[byCat.PTY] || `코드 ${byCat.PTY}`) : `${byCat[cat]}${conf.unit}`;
-  }
-  return summary;
-};
-
-// --- 날씨 필터 문자열을 Sequelize 조건 객체로 변환하는 헬퍼 함수 ---
+// 날씨 필터 문자열을 Sequelize 조건 객체로 변환하는 헬퍼 함수
 const getWeatherCondition = (weatherFilter, minTemp, maxTemp) => {
   const condition = {};
   const extractNumbers = (str) => str.match(/-?\d+/g)?.map(Number);
 
+  // UltraNowcast 모델의 온도 컬럼 'tmp'를 기준으로 조건을 생성
   if (weatherFilter.includes('이하')) {
-    condition.temperature = { [Op.lte]: extractNumbers(weatherFilter)[0] };
+    condition.tmp = { [Op.lte]: extractNumbers(weatherFilter)[0] };
   } else if (weatherFilter.includes('이상')) {
-    condition.temperature = { [Op.gte]: extractNumbers(weatherFilter)[0] };
+    condition.tmp = { [Op.gte]: extractNumbers(weatherFilter)[0] };
   } else if (weatherFilter.includes('~')) {
     const [min, max] = extractNumbers(weatherFilter);
-    condition.temperature = { [Op.between]: [min, max] };
+    condition.tmp = { [Op.between]: [min, max] };
   } else if (weatherFilter === 'custom') {
     const min = parseFloat(minTemp);
     const max = parseFloat(maxTemp);
     if (!isNaN(min) && !isNaN(max)) {
-      condition.temperature = { [Op.between]: [min, max] };
+      condition.tmp = { [Op.between]: [min, max] };
     } else if (!isNaN(min)) {
-      condition.temperature = { [Op.gte]: min };
+      condition.tmp = { [Op.gte]: min };
     } else if (!isNaN(max)) {
-      condition.temperature = { [Op.lte]: max };
+      condition.tmp = { [Op.lte]: max };
     }
   }
   return condition;
 };
 
-// 필터링/정렬된 일반 목록 조회
+// 룩 목록 조회
 exports.getLooks = async (req, res) => {
   try {
     const { sort = 'latest', page = 1, limit = 20, sido, gungu, date, weather, minTemp, maxTemp } = req.query;
@@ -53,9 +38,35 @@ exports.getLooks = async (req, res) => {
     if (sido) where.sido = sido;
     if (gungu) where.gungu = gungu;
     if (date) where.date = { [Op.eq]: new Date(date) };
-    // 날씨 필터가 있을 경우, Post의 temperature 컬럼을 기준으로 where 조건 추가
+
+    let postIds = null;
+
+    // 날씨 필터가 있을 경우, UltraNowcast에서 조건에 맞는 Post의 ID 목록을 먼저 찾음
     if (weather && weather !== '전체') {
-      Object.assign(where, getWeatherCondition(weather, minTemp, maxTemp));
+      const weatherCondition = getWeatherCondition(weather, minTemp, maxTemp);
+      const ultraNowcasts = await UltraNowcast.findAll({
+        where: weatherCondition,
+        attributes: ['si', 'gungu', 'baseDate', 'baseTime'],
+        raw: true,
+      });
+
+      if (ultraNowcasts.length === 0) {
+        // 조건에 맞는 날씨가 없으면 빈 결과를 반환
+        return res.status(200).json(ApiResponse.success({
+          message: "조건에 맞는 게시물이 없습니다.",
+          result: { pagination: { totalPosts: 0, totalPages: 0 }, looks: [] }
+        }));
+      }
+
+      // 날씨 조건에 맞는 Post를 찾기 위한 조건들을 생성
+      const timeLocationConditions = ultraNowcasts.map(uc => ({
+        sido: uc.si,
+        gungu: uc.gungu,
+        date: uc.baseDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'),
+        hour: String(parseInt(uc.baseTime.slice(0, 2), 10)),
+      }));
+
+      where[Op.or] = timeLocationConditions;
     }
 
     const paginatedResult = await Post.findAndCountAll({
@@ -65,9 +76,15 @@ exports.getLooks = async (req, res) => {
       offset: (page - 1) * parseInt(limit),
       include: [
         { model: Image, attributes: ['imageUrl'] },
+<<<<<<< Updated upstream
         { model: User, attributes: ['nickname'] }
       ],
       distinct: true
+=======
+        { model: Weather, as: 'weatherInfo', attributes: ['description'] }
+      ],
+      distinct: true,
+>>>>>>> Stashed changes
     });
     
     const result = {
@@ -81,12 +98,12 @@ exports.getLooks = async (req, res) => {
     };
     
     return res.status(200).json(ApiResponse.success({ message: "룩 목록 조회 성공", result }));
+
   } catch (error) {
     console.error(error);
     return res.status(500).json(ApiResponse.fail({ message: error.message }));
   }
 };
-
 // BEST 10 게시물 조회
 exports.getBestLooks = async (req, res) => {
     try {
@@ -187,14 +204,15 @@ exports.getLookDetail = async (req, res) => {
       include: [
         { model: User, attributes: ['nickname'] },
         { model: Image, attributes: ['imageUrl'] },
+        // Post에 연결된 Weather(요약 정보)를 가져옵니다.
+        { model: Weather, as: 'weatherInfo' }
       ]
     });
 
     if (!post) {
       return res.status(404).json(ApiResponse.fail({ code: "LOOKS404", message: "해당 게시물을 찾을 수 없습니다." }));
     }
-
-    // 좋아요 여부 확인 로직 
+    
     let isLiked = false;
     if (userId) {
       const existingLike = await Like.findOne({
@@ -208,15 +226,16 @@ exports.getLookDetail = async (req, res) => {
       imageUrl: post.Image ? post.Image.imageUrl : null,
       date: post.date,
       location: `${post.sido || ''} ${post.gungu || ''}`.trim(),
-      temperature: post.temperature, 
-      feelsLikeTemp: post.apparent_temp, 
+      // weatherInfo 객체에서 필요한 정보를 추출합니다.
+      temperature: post.weatherInfo?.temperature, // Weather 모델에 temperature 컬럼이 있다고 가정
+      feelsLikeTemp: post.apparent_temp,
+      weatherDescription: post.weatherInfo ? post.weatherInfo.description : '날씨 정보 없음', 
       comment: post.comment,
       likeCount: post.like_count,
       isLiked: isLiked
     };
 
     return res.status(200).json(ApiResponse.success({ code: "LOOKS201", message: "게시물 상세 조회에 성공했습니다.", result }));
-
   } catch (error) {
     console.error(error);
     return res.status(500).json(ApiResponse.fail({ message: error.message }));
