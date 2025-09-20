@@ -76,15 +76,10 @@ exports.getLooks = async (req, res) => {
       offset: (page - 1) * parseInt(limit),
       include: [
         { model: Image, attributes: ['imageUrl'] },
-<<<<<<< Updated upstream
+        { model: Weather, as: 'weatherInfo', attributes: ['description'] },
         { model: User, attributes: ['nickname'] }
       ],
-      distinct: true
-=======
-        { model: Weather, as: 'weatherInfo', attributes: ['description'] }
-      ],
       distinct: true,
->>>>>>> Stashed changes
     });
     
     const result = {

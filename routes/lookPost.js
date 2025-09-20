@@ -1,19 +1,17 @@
 // routes/lookPost.js 
 const express = require('express');
-<<<<<<< Updated upstream
 const router = express.Router();
 const lookPostController = require('../controllers/lookPostControllers');
 const { isLoggedIn } = require('../middlewares/authMiddleware'); // 기존 인증 미들웨어
 const { upload } = require('../middlewares/uploadMiddleware'); // 파일 업로드 미들웨어
-=======
+
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 const path = require('path');
 const AWS = require('aws-sdk');
 //const fs = require('fs');
 const { isLoggedIn } = require('../middlewares');
-const UltraNowcast = require('../models/ultraNowcast');
->>>>>>> Stashed changes
+const UltraNowcast = require('../models/UltraNowcast');
 
 /**
  * @swagger
