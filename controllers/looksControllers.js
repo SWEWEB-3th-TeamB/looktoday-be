@@ -107,6 +107,76 @@ exports.getBestLooks = async (req, res) => {
     }
 };
 
+// 내 게시물 조회
+exports.getMine = async (req, res) => {
+  try {
+    const userId = req.user?.user_id ?? req.user?.id;
+    if (!userId) {
+      return res.status(401).json(ApiResponse.fail({ code: "AUTH401", message: "로그인이 필요합니다." }));
+    }
+    const {
+      page = 1,
+      limit = 8,
+      period,
+      startDate,
+      endDate
+    } = req.query;
+
+    const where = { user_id: userId };
+
+    // 날짜 필터링 로직
+    if (period) {
+      const today = new Date();
+      let calculatedStartDate;
+
+      if (period === '12m') { // 최근 12개월
+        calculatedStartDate = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+      } else if (period === 'last_month') { // 저번달
+        calculatedStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+        where.date = { [Op.between]: [calculatedStartDate, endOfMonth] };
+      } else if (period === 'prev_month') { // 저저번달
+        calculatedStartDate = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() - 1, 0);
+        where.date = { [Op.between]: [calculatedStartDate, endOfMonth] };
+      }
+
+      if (period === '12m') {
+        where.date = { [Op.gte]: calculatedStartDate };
+      }
+
+    } else if (startDate && endDate) { // 사용자 지정 기간
+      where.date = { [Op.between]: [new Date(startDate), new Date(endDate)] };
+    }
+
+    const paginatedResult = await Post.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: (page - 1) * parseInt(limit),
+      include: [
+        { model: Image, attributes: ['imageUrl'] },
+      ],
+      distinct: true
+    });
+
+    const result = {
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPosts: paginatedResult.count,
+        totalPages: Math.ceil(paginatedResult.count / limit)
+      },
+      looks: paginatedResult.rows
+    };
+
+    return res.status(200).json(ApiResponse.success({ message: "내 룩 목록 조회 성공", result }));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(ApiResponse.fail({ message: error.message }));
+  }
+};
+
 // 게시물 상세 조회
 exports.getLookDetail = async (req, res) => {
   try {
