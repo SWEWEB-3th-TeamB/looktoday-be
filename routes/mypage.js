@@ -29,7 +29,7 @@ router.get('/check-username', authController.checkNickname);
  *     summary: "프로필 수정 (이메일, 비밀번호, 닉네임, 생일, 지역)"
  *     tags: [MyPage]
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -95,7 +95,7 @@ router.put('/me', isLoggedIn, mypageController.updateProfile);
  *     summary: "내가 작성한 피드 조회"
  *     tags: [MyPage]
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -106,7 +106,7 @@ router.put('/me', isLoggedIn, mypageController.updateProfile);
  *         name: limit
  *         schema:
  *           type: integer
- *           default: 10
+ *           default: 8
  *       - in: query
  *         name: period
  *         schema:
@@ -137,7 +137,7 @@ router.put('/me', isLoggedIn, mypageController.updateProfile);
  *                   value: "12m"
  *                 pagination:
  *                   page: 1
- *                   limit: 10
+ *                   limit: 8
  *                   totalPosts: 25
  *                   totalPages: 3
  *                 myLooks:
@@ -166,7 +166,7 @@ router.get('/me/feeds',isLoggedIn, mypageController.getMyFeeds);
  *     summary: "내가 좋아요한 게시글 조회"
  *     tags: [MyPage]
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -177,7 +177,7 @@ router.get('/me/feeds',isLoggedIn, mypageController.getMyFeeds);
  *         name: limit
  *         schema:
  *           type: integer
- *           default: 10
+ *           default: 8
  *       - in: query
  *         name: period
  *         schema:
@@ -205,7 +205,7 @@ router.get('/me/feeds',isLoggedIn, mypageController.getMyFeeds);
  *                   value: "12m"
  *                 pagination:
  *                   page: 1
- *                   limit: 10
+ *                   limit: 8
  *                   totalPosts: 12
  *                   totalPages: 2
  *                 myLikes:
