@@ -287,7 +287,7 @@ router.post('/login', isNotLoggedIn, authController.login);
  *     summary: "로그아웃"
  *     tags: [Users]
  *     security:
- *       - bearerAuth: []   # JWT 토큰 필요
+ *       - BearerAuth: []   # JWT 토큰 필요
  *     responses:
  *       200:
  *         description: "로그아웃 성공"
@@ -334,7 +334,7 @@ router.post('/logout', isLoggedIn, authController.logout);
  *     summary: "로그인된 사용자 정보 조회"
  *     tags: [Users]
  *     security:
- *       - bearerAuth: []   # JWT 토큰 필요
+ *       - BearerAuth: []   # JWT 토큰 필요
  *     responses:
  *       200:
  *         description: "사용자 정보 조회 성공"
