@@ -54,7 +54,7 @@ exports.createPost = async (user, body, file) => {
     const user_id = user.user_id; // 로그인 사용자 ID
     const previousCount = await Post.count({ where: { user_id } }); // 지금까지 쓴 게시글 수 확인
     const weatherRow = await findWeather(si, gungu, date, hour); // 날씨 조회 시도
-    const temperature = weatherRow ? weatherRow.temperature : null;
+    const temperature = weatherRow ? weatherRow.tmp : null;
 
     const newPost = await Post.create({
         user_id,
