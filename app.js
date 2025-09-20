@@ -22,6 +22,7 @@ const weatherRouter = require('./routes/weather');
 const weatherNowRoutes = require('./routes/weatherNow');
 const sunRouter = require('./routes/sun');
 const weatherProxy = require("./routes/weatherProxy"); // 날씨API cors 해결코드
+const userRoutes = require('./routes/user');   
 
 // --- Cron ---
 const weatherCron = require('./services/weatherCron');
@@ -104,6 +105,7 @@ if (process.env.SWAGGER !== 'off') {
 app.use('/api/weather', weatherRouter);
 app.use('/api/weather', weatherNowRoutes);
 app.use('/api/weather-proxy', weatherProxy); // 날씨API cors 문제 해결 추가 코드
+app.use('/api/users', userRoutes);  //메인용
 app.use('/api/auth', authRoutes);
 app.use('/api/users', mypageRoutes);
 app.use('/api/looks', looksRoutes);
