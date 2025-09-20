@@ -6,19 +6,13 @@ const path = require('path');
 const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3'); 
 
 // AWS S3 설정
-const s3 = new S3Client({
-    region: 'ap-northeast-2',
-    // credentials: {
-    //     accessKeyId: process.env.S3_KEY_ID,
-    //     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-    // },
-});
+const s3 = new S3Client({region: process.env.AWS_REGION});
 
 // multer s3 설정
 const upload = multer({
     storage: multerS3({
         s3,
-        bucket: process.env.S3_BUCKET_NAME,
+        bucket: process.env.AWS_BUCKET_NAME,
         contentType: multerS3.AUTO_CONTENT_TYPE,
         // acl: 'public-read',
         key(req, file, cb) {
