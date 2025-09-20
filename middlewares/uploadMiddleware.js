@@ -26,7 +26,7 @@ const upload = multer({
 // S3 파일 삭제 함수
 const deleteFile = async (imageUrl) => {
     // imageUrl이 유효한 s3 주소인지 확인
-    if (!imageUrl || !imageUrl.includes(process.env.S3_BUCKET_NAME)) {
+    if (!imageUrl || !imageUrl.includes(process.env.AWS_BUCKET_NAME)) {
         console.log("유효한 S3 URL이 아니므로 삭제를 건너뜁니다.");
         return;
     }
@@ -35,7 +35,7 @@ const deleteFile = async (imageUrl) => {
         const key = url.pathname.substring(1); // 맨 앞의 '/' 제거
 
         await s3.send(new DeleteObjectCommand({
-            Bucket: process.env.S3_BUCKET_NAME,
+            Bucket: process.env.AWS_BUCKET_NAME,
             Key: key
         }));
         console.log(`S3 파일 삭제 성공: ${key}`);

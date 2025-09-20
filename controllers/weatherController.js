@@ -1,7 +1,11 @@
+// controllers/weatherController.js
 const db = require('../models');
 const { UltraNowcast } = db;
 const locationMap = require('../data/locationMap');
 const { ApiResponse } = require('../response');
+
+// ✅ KST 정시 계산 유틸 (A안)
+const { currentBaseKST, basesWithFallback, ZONE } = require('../utils/time');
 
 /** 풍향(deg) → 한글 방위 */
 function windDirKo(deg) {
@@ -43,32 +47,7 @@ function getNxNy(si, gungu) {
   return arr.find(d => d.district === gungu) || null;
 }
 
-/** 현재 정시(HH00) */
-function currentBase() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  const H = String(now.getHours()).padStart(2, '0');
-  return { baseDate: `${y}${m}${d}`, baseTime: `${H}00` };
-}
-
-/** baseDate/time에서 시간 ±offset */
-function shift(baseDate, baseTime, hourOffset) {
-  const y = Number(baseDate.slice(0,4));
-  const mo = Number(baseDate.slice(4,6)) - 1;
-  const da = Number(baseDate.slice(6,8));
-  const H = Number(baseTime.slice(0,2));
-  const dt = new Date(y, mo, da, H, 0, 0);
-  dt.setHours(dt.getHours() + hourOffset);
-  const Y = dt.getFullYear();
-  const M = String(dt.getMonth() + 1).padStart(2, '0');
-  const D = String(dt.getDate()).padStart(2, '0');
-  const HH = String(dt.getHours()).padStart(2, '0');
-  return { baseDate: `${Y}${M}${D}`, baseTime: `${HH}00` };
-}
-
-/** row(가로형 1행) → [{category, obsrValue}] 배열로 변환 (기존 buildMaps 재사용용) */
+/** row(가로형 1행) → [{category, obsrValue}] 배열로 변환 */
 function rowToItems(row) {
   const items = [];
   if (row.tmp != null) items.push({ category: 'T1H', obsrValue: row.tmp });
@@ -83,7 +62,7 @@ function rowToItems(row) {
   return items;
 }
 
-/** 카테고리 배열 → 요약/원시 맵 (기존 로직 그대로) */
+/** 카테고리 배열 → 요약/원시 맵 */
 function buildMaps(rows) {
   const byCat = {};
   for (const r of rows) byCat[r.category] = String(r.obsrValue);
@@ -100,7 +79,7 @@ function buildMaps(rows) {
     '체감온도': feelsLikeC(tmp, reh),
     '습도': reh,
     '강수량': rn1,
-    '강수확률': null,            // DB 실황에는 POP 없음 → null
+    '강수확률': null,            // DB 실황에는 POP 없음
     '풍속': wsd,
     '풍향': vec != null ? `${windDirKo(vec)} (${vec}°)` : null,
     '날씨': pty ? (PTY_LABEL[pty] || `코드 ${pty}`) : null,
@@ -112,17 +91,19 @@ function buildMaps(rows) {
 /**
  * GET /api/weather?si=서울특별시&gungu=종로구
  * - DB(ultra_nowcast)에서 최신 실황 1행을 읽어서 기존 포맷으로 응답
+ * - ✅ 조회 기준 시각을 Asia/Seoul 정시(HH00)로 고정 + 최대 3시간 fallback
  */
 exports.getWeather = async (req, res) => {
   try {
-    const { si, gungu } = req.query;
+    const si = String(req.query.si || '').trim();
+    const gungu = String(req.query.gungu || '').trim();
     if (!si || !gungu) {
       return res.status(400).json(
         ApiResponse.fail({ code: 'WEATHER400', message: '시, 군구 정보가 필요합니다.' })
       );
     }
 
-    const loc = getNxNy(String(si).trim(), String(gungu).trim());
+    const loc = getNxNy(si, gungu);
     if (!loc) {
       return res.status(404).json(
         ApiResponse.fail({ code: 'WEATHER404', message: `좌표를 찾을 수 없습니다: ${si} ${gungu}` })
@@ -130,33 +111,34 @@ exports.getWeather = async (req, res) => {
     }
     const { nx, ny } = loc;
 
-    // 현재 정시 → 없으면 -1h → -2h 폴백
-    const nowBase = currentBase();
-    const candidates = [
-      nowBase,
-      shift(nowBase.baseDate, nowBase.baseTime, -1),
-      shift(nowBase.baseDate, nowBase.baseTime, -2),
-    ];
+    // ✅ 디버그용: 현재 어떤 키로 조회하는지 헤더에 노출
+    const probe = currentBaseKST();
+    res.setHeader('X-Base-Date', probe.baseDate);
+    res.setHeader('X-Base-Time', probe.baseTime);
+    res.setHeader('X-Base-TZ', ZONE);
 
+    // ✅ 현재 정시부터 최대 3시간 전까지 KST 기준 fallback
     let chosen = null;
     let rows = null;
 
-    for (const c of candidates) {
+    for (const { baseDate, baseTime } of basesWithFallback(3)) {
       const found = await UltraNowcast.findOne({
-        where: { baseDate: c.baseDate, baseTime: c.baseTime, nx, ny },
+        where: { baseDate, baseTime, nx, ny },
+        order: [['id', 'DESC']],
       });
       if (found) {
-        chosen = c;
-        rows = rowToItems(found);   // ← 1행을 카테고리 배열로 변환
+        chosen = { baseDate, baseTime };
+        rows = rowToItems(found);
+        const originalRow = found;
         break;
       }
     }
 
     if (!rows) {
-      return res.status(204).json(); // No Content
+      return res.status(204).send();
     }
 
-    const { summary } = buildMaps(rows);
+    const { summary, raw } = buildMaps(rows);
 
     const pretty = {
       success: true,
@@ -164,8 +146,18 @@ exports.getWeather = async (req, res) => {
       기준시각: {
         '날짜': `${chosen.baseDate.slice(0,4)}-${chosen.baseDate.slice(4,6)}-${chosen.baseDate.slice(6,8)}`,
         '시간': `${chosen.baseTime.slice(0,2)}:00:00`,
+        '표준시': ZONE,
       },
-      data: summary,
+      data: {
+              summary,        // 사람이 보기 좋은 요약
+              raw,            // 원시 카테고리 맵 (T1H/REH/WSD/VEC/UUU/VVV/PTY/RN1/LGT)
+              originalRow,
+              meta: {         // 디버깅/추적용 정보 (원하면 뺄 수 있음)
+                baseDate: chosen.baseDate,
+                baseTime: chosen.baseTime,
+                nx, ny
+              }
+            },
     };
 
     res.set('Cache-Control', 'public, max-age=60');
