@@ -1,4 +1,4 @@
-const { Post, Like, Image, User, Weather, UltraNowcast } = require('../models');
+const { Post, Like, Image, User, UltraNowcast } = require('../models');
 const { ApiResponse } = require('../response');
 const { Op } = require('sequelize');
 
@@ -76,12 +76,12 @@ exports.getLooks = async (req, res) => {
       offset: (page - 1) * parseInt(limit),
       include: [
         { model: Image, attributes: ['imageUrl'] },
-        { model: Weather, as: 'weatherInfo', attributes: ['description'] },
+        //{ model: Weather, as: 'weatherInfo', attributes: ['description'] },
         { model: User, attributes: ['nickname'] }
       ],
       distinct: true,
     });
-    
+
     const result = {
       pagination: {
         page: parseInt(page),
@@ -200,7 +200,7 @@ exports.getLookDetail = async (req, res) => {
         { model: User, attributes: ['nickname'] },
         { model: Image, attributes: ['imageUrl'] },
         // Post에 연결된 Weather(요약 정보)를 가져옵니다.
-        { model: Weather, as: 'weatherInfo' }
+        //{ model: Weather, as: 'weatherInfo' }
       ]
     });
 
@@ -222,9 +222,10 @@ exports.getLookDetail = async (req, res) => {
       date: post.date,
       location: `${post.sido || ''} ${post.gungu || ''}`.trim(),
       // weatherInfo 객체에서 필요한 정보를 추출합니다.
-      temperature: post.weatherInfo?.temperature, // Weather 모델에 temperature 컬럼이 있다고 가정
+      temperature: post.temperature, // Weather 모델에 temperature 컬럼이 있다고 가정
       feelsLikeTemp: post.apparent_temp,
-      weatherDescription: post.weatherInfo ? post.weatherInfo.description : '날씨 정보 없음', 
+      feelsLikeHumid: post.apparent_humidity,
+      weatherDescription: '날씨 정보 없음', 
       comment: post.comment,
       likeCount: post.like_count,
       isLiked: isLiked
@@ -297,3 +298,4 @@ exports.unlikePost = async (req, res) => {
         return res.status(500).json(ApiResponse.fail({ code: "LOOKS500", message: error.message }));
     }
 };
+

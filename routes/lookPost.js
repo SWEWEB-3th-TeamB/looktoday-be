@@ -8,9 +8,8 @@ const { upload } = require('../middlewares/uploadMiddleware'); // 파일 업로�
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 const path = require('path');
-const AWS = require('aws-sdk');
+//const AWS = require('aws-sdk');
 //const fs = require('fs');
-const { isLoggedIn } = require('../middlewares');
 const UltraNowcast = require('../models/UltraNowcast');
 
 /**
