@@ -96,7 +96,7 @@ class Post extends Sequelize.Model {
         // Post 모델은 User 모델에 속해있음 // eunseo 이미지 여러장 붙일 계획이면 hasMany 고려
         db.Post.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'user_id' });
         db.Post.hasOne(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
-        // db.Post.belongsTo(db.Weather, { foreignKey: 'weather_id', targetKey: 'id', as: 'weatherInfo' });
+        db.Post.belongsTo(db.UltraNowcast, { foreignKey: 'weather_id', targetKey: 'id' });
         db.Post.hasOne(db.Like, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
     }
 }
