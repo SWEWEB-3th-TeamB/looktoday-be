@@ -129,7 +129,7 @@ exports.updatePost = async (looktoday_id, user, body, file) => {
     const weatherRow = await findWeather(
         si ?? post.si, gungu ?? post.gungu, date ?? post.date, hour ?? post.hour); // 날씨 조회 시도
 
-    const temperature = weatherRow ? weatherRow.temperature : post.temperature;
+    const temperature = weatherRow ? weatherRow.tmp : post.temperature;
 
     await post.update({ // 업데이트
         si,
