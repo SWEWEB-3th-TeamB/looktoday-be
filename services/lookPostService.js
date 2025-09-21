@@ -126,10 +126,23 @@ exports.updatePost = async (looktoday_id, user, body, file) => {
         }
     }
 
+    // 날씨 조회 시도
     const weatherRow = await findWeather(
         si ?? post.si, gungu ?? post.gungu, date ?? post.date, hour ?? post.hour); // 날씨 조회 시도
 
-    const temperature = weatherRow ? weatherRow.temperature : post.temperature;
+    const updatedWeatherData = {};
+
+    // 새로운 날씨 정보 성공적으로 조회 -> 업데이트
+    if (weatherRow) {
+        updatedWeatherData.weather_id = weatherRow.id;
+        updatedWeatherData.temperature = weatherRow.tmp;
+    }
+
+    // 변경됐는데 날씨 정보가 없는 경우 -> null로 설정
+    else if (si || gungu || date || hour) {
+        updatedWeatherData.weather_id = null;
+        updatedWeatherData.temperature = null;
+    }
 
     await post.update({ // 업데이트
         si,
@@ -140,8 +153,7 @@ exports.updatePost = async (looktoday_id, user, body, file) => {
         comment,
         date,
         hour,
-        weather_id: weatherRow ? weatherRow.id : null, // 없으면 null
-        temperature,
+        ...updatedWeatherData
     });
 };
 

@@ -3,11 +3,6 @@ const cron = require('node-cron');
 const { Post, UltraNowcast, Sequelize: { Op} } = require('../models');
 const { toBaseDateTime } = require('../utils/dateTime');
 
-async function findWeatherBySlot(si, gungu, date, hour) {
-  const { baseDate, baseTime } = toBaseDateTime(date, hour);
-  return UltraNowcast.findOne({ where: { si, gungu, baseDate, baseTime } });
-}
-
 // 매시 20분에 실행
 module.exports = cron.schedule('20 * * * *', async () => {
     try {
@@ -29,15 +24,39 @@ module.exports = cron.schedule('20 * * * *', async () => {
             return;
         }
 
+        const uniqueLookups = new Map();
+        postsToUpdate.forEach(p => {
+            const { baseDate, baseTime } = toBaseDateTime(p.date, p.hour);
+            const key = `${p.si}|${p.gungu}|${baseDate}|${baseTime}`;
+            if (!uniqueLookups.has(key)) {
+                uniqueLookups.set(key, { si: p.si, gungu: p.gungu, baseDate, baseTime });
+            }
+        });
+        const weatherLookups = Array.from(uniqueLookups.values());
+
+        const weatherRows = await UltraNowcast.findAll({
+            where: {
+                [Op.or]: weatherLookups
+            }
+        });
+
+        const weatherMap = new Map();
+        weatherRows.forEach(w => {
+            const key = `${w.si}|${w.gungu}|${w.baseDate}|${w.baseTime}`;
+            weatherMap.set(key, { id: w.id, tmp: w.tmp});
+        });
+
         console.log(`[Cron] ${postsToUpdate.length}개의 게시물 날씨 보정 시도`);
 
         for (const p of postsToUpdate) {
             try {
-                const weatherRow = await findWeatherBySlot(p.si, p.gungu, p.date, p.hour);
-                if (weatherRow) {
+                const { baseDate, baseTime } = toBaseDateTime(p.date, p.hour);
+                const key = `${p.si}|${p.gungu}|${baseDate}|${baseTime}`;
+                const weatherData = weatherMap.get(key);
+                if (weatherData) {
                     await p.update({ 
-                        weather_id: weatherRow.id,
-                        temperature: weatherRow.temperature
+                        weather_id: weatherData.id,
+                        temperature: weatherData.tmp
                     });
                     console.log(`[Cron] Post ${p.looktoday_id} → 날씨 보정 완료`);
                 }
