@@ -224,6 +224,7 @@ exports.getLookDetail = async (req, res) => {
       // weatherInfo 객체에서 필요한 정보를 추출합니다.
       temperature: post.temperature, // Weather 모델에 temperature 컬럼이 있다고 가정
       feelsLikeTemp: post.apparent_temp,
+      feelsLikeHumid: post.apparent_humidity,
       weatherDescription: '날씨 정보 없음', 
       comment: post.comment,
       likeCount: post.like_count,
@@ -297,3 +298,4 @@ exports.unlikePost = async (req, res) => {
         return res.status(500).json(ApiResponse.fail({ code: "LOOKS500", message: error.message }));
     }
 };
+
