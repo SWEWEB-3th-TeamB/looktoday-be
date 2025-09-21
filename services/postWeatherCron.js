@@ -37,7 +37,7 @@ module.exports = cron.schedule('20 * * * *', async () => {
                 if (weatherRow) {
                     await p.update({ 
                         weather_id: weatherRow.id,
-                        temperature: weatherRow.temperature
+                        temperature: weatherRow.tmp
                     });
                     console.log(`[Cron] Post ${p.looktoday_id} → 날씨 보정 완료`);
                 }
