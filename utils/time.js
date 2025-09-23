@@ -1,4 +1,3 @@
-// utils/time.js
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const tz = require('dayjs/plugin/timezone');
@@ -7,13 +6,12 @@ dayjs.extend(tz);
 
 const ZONE = 'Asia/Seoul';
 
-// 실황 수집/반영 지연 보정 (권장 15~20분)
+// 반영 지연 보정 (20분 뒤쳐서 계산)
 const GRACE_MINUTES = 20;
-
-// 타임스텝 간격 (초단기실황은 보통 10분 간격)
+// 초단기 실황은 10분 간격
 const STEP_MINUTES = 10;
 
-/** now(KST)에서 GRACE_MINUTES만큼 빼고, STEP_MINUTES 단위로 내림 */
+// 10분 단위로 내림 + 지연 보정
 function floorToStepKST(now = dayjs().tz(ZONE)) {
   const t = now.subtract(GRACE_MINUTES, 'minute');
   const m = t.minute();
@@ -21,23 +19,20 @@ function floorToStepKST(now = dayjs().tz(ZONE)) {
   return t.minute(floored).second(0).millisecond(0);
 }
 
-/** 현재 KST 기준 가용 base (HHmm) */
+// 현재 기준 시각
 function currentBaseKST() {
   const base = floorToStepKST();
   return {
     baseDate: base.format('YYYYMMDD'),
     baseTime: base.format('HHmm'),
     tz: ZONE,
-    isoNow: dayjs().tz(ZONE).toISOString(), // 디버깅용
+    isoNow: dayjs().tz(ZONE).toISOString(),
   };
 }
 
-/**
- * 최근 N시간까지 KST 기준으로 fallback (STEP_MINUTES 간격)
- * 기존 시그니처 유지: basesWithFallback(3) → 3시간 범위
- */
+// 최근 N시간까지 fallback (10분 간격)
 function* basesWithFallback(hoursBack = 3) {
-  const start = floorToStepKST(); // 예: HH10, HH20, ... 로 떨어짐
+  const start = floorToStepKST();
   const steps = Math.max(0, Math.floor((hoursBack * 60) / STEP_MINUTES));
   for (let i = 0; i <= steps; i++) {
     const b = start.subtract(i * STEP_MINUTES, 'minute');
