@@ -1,4 +1,3 @@
-// utils/time.js
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const tz = require('dayjs/plugin/timezone');
@@ -7,24 +6,38 @@ dayjs.extend(tz);
 
 const ZONE = 'Asia/Seoul';
 
-// 현재 KST '정시' 기준 baseDate/baseTime
+// 반영 지연 보정 (20분 뒤쳐서 계산)
+const GRACE_MINUTES = 20;
+// 초단기 실황은 10분 간격
+const STEP_MINUTES = 10;
+
+// 10분 단위로 내림 + 지연 보정
+function floorToStepKST(now = dayjs().tz(ZONE)) {
+  const t = now.subtract(GRACE_MINUTES, 'minute');
+  const m = t.minute();
+  const floored = Math.floor(m / STEP_MINUTES) * STEP_MINUTES;
+  return t.minute(floored).second(0).millisecond(0);
+}
+
+// 현재 기준 시각
 function currentBaseKST() {
-  const base = dayjs().tz(ZONE).startOf('hour');
+  const base = floorToStepKST();
   return {
     baseDate: base.format('YYYYMMDD'),
-    baseTime: base.format('HH00'),
+    baseTime: base.format('HHmm'),
     tz: ZONE,
-    isoNow: dayjs().tz(ZONE).toISOString(), // 디버그용
+    isoNow: dayjs().tz(ZONE).toISOString(),
   };
 }
 
-// 최근 N시간까지 KST 기준으로 롤백 (조회 fallback용)
+// 최근 N시간까지 fallback (10분 간격)
 function* basesWithFallback(hoursBack = 3) {
-  const start = dayjs().tz(ZONE).startOf('hour');
-  for (let i = 0; i <= hoursBack; i++) {
-    const b = start.subtract(i, 'hour');
-    yield { baseDate: b.format('YYYYMMDD'), baseTime: b.format('HH00') };
+  const start = floorToStepKST();
+  const steps = Math.max(0, Math.floor((hoursBack * 60) / STEP_MINUTES));
+  for (let i = 0; i <= steps; i++) {
+    const b = start.subtract(i * STEP_MINUTES, 'minute');
+    yield { baseDate: b.format('YYYYMMDD'), baseTime: b.format('HHmm') };
   }
 }
 
-module.exports = { currentBaseKST, basesWithFallback, ZONE };
+module.exports = { currentBaseKST, basesWithFallback, ZONE, GRACE_MINUTES, STEP_MINUTES };
