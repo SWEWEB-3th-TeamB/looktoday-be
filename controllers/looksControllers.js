@@ -32,12 +32,12 @@ const getWeatherCondition = (weatherFilter, minTemp, maxTemp) => {
 // 룩 목록 조회
 exports.getLooks = async (req, res) => {
   try {
-    const { sort = 'latest', page = 1, limit = 20, sido, gungu, date, weather, minTemp, maxTemp } = req.query;
+    const { sort = 'latest', page = 1, limit = 20, sido, gungu, startDate, endDate, weather, minTemp, maxTemp } = req.query;
 
     const where = {isPublic: true};
     if (sido) where.sido = sido;
     if (gungu) where.gungu = gungu;
-    if (date) where.date = { [Op.eq]: new Date(date) };
+    if (startDate && endDate) where.date = { [Op.between]: [startDate, endDate] };
 
     let postIds = null;
 
