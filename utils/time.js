@@ -6,8 +6,8 @@ dayjs.extend(tz);
 
 const ZONE = 'Asia/Seoul';
 
-// 반영 지연 보정 (20분 뒤쳐서 계산)
-const GRACE_MINUTES = 20;
+// 반영 지연 보정 (⏱ 2분 정도만 빼줌)
+const GRACE_MINUTES = 2;
 // 초단기 실황은 10분 간격
 const STEP_MINUTES = 10;
 
@@ -24,7 +24,7 @@ function currentBaseKST() {
   const base = floorToStepKST();
   return {
     baseDate: base.format('YYYYMMDD'),
-    baseTime: base.format('HHmm'),
+    baseTime: base.format('HHmm'), // ✅ HH00이 아니라 HHmm
     tz: ZONE,
     isoNow: dayjs().tz(ZONE).toISOString(),
   };
