@@ -41,18 +41,24 @@ const { authMiddleware } = require('../middlewares/authMiddleware.js');
  *         name: sido
  *         schema:
  *           type: string
- *         description: "시/도 필터링 (예: 서울시)"
+ *         description: "시/도 필터링 (예: 서울특별시)"
  *       - in: query
  *         name: gungu
  *         schema:
  *           type: string
- *         description: "군/구 필터링 (예: 노원구)"
+ *         description: "군/구 필터링 (예: 강남구)"
  *       - in: query
- *         name: date
+ *         name: startDate
  *         schema:
  *           type: string
  *           format: date
- *         description: "날짜 필터링 (YYYY-MM-DD)"
+ *         description: "기간 필터링 시작일 (YYYY-MM-DD)"
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: "기간 필터링 종료일 (YYYY-MM-DD)"
  *       - in: query
  *         name: weather
  *         schema:
@@ -69,9 +75,9 @@ const { authMiddleware } = require('../middlewares/authMiddleware.js');
  *           type: integer
  *         description: "직접입력 최대 온도 (weather=custom 일 때 사용)"
  *     responses:
- *       200:
+ *       "200":
  *         description: "룩 목록 조회 성공"
- *       500:
+ *       "500":
  *         description: "서버 오류"
  */
 router.get('/', looksControllers.getLooks);
