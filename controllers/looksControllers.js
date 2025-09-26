@@ -168,6 +168,7 @@ exports.getMine = async (req, res) => {
       offset: (page - 1) * parseInt(limit),
       include: [
         { model: Image, attributes: ['imageUrl'] },
+        { model: User, attributes: ['nickname'] }
       ],
       distinct: true
     });
