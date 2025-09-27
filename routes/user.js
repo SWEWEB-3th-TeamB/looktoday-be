@@ -4,7 +4,7 @@ const userController = require('../controllers/userController');
 const { verifyToken } = require('../middlewares/authMiddleware');
 
 // 내 정보
-router.get('/me', verifyToken, userController.getMe);
+// router.get('/me', verifyToken, userController.getMe);
 
 // 내 지역 날씨 (쿼리로 si,gungu 허용)
 router.get('/me/weather', verifyToken, userController.getMyWeather);

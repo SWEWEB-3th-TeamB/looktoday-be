@@ -32,10 +32,10 @@ const getWeatherCondition = (weatherFilter, minTemp, maxTemp) => {
 // 룩 목록 조회
 exports.getLooks = async (req, res) => {
   try {
-    const { sort = 'latest', page = 1, limit = 20, sido, gungu, startDate, endDate, weather, minTemp, maxTemp } = req.query;
+    const { sort = 'latest', page = 1, limit = 20, si, gungu, startDate, endDate, weather, minTemp, maxTemp } = req.query;
 
     const where = {isPublic: true};
-    if (sido) where.sido = sido;
+    if (si) where.si = si;
     if (gungu) where.gungu = gungu;
     if (startDate && endDate) where.date = { [Op.between]: [startDate, endDate] };
 
@@ -60,7 +60,7 @@ exports.getLooks = async (req, res) => {
 
       // 날씨 조건에 맞는 Post를 찾기 위한 조건들을 생성
       const timeLocationConditions = ultraNowcasts.map(uc => ({
-        sido: uc.si,
+        si: uc.si,
         gungu: uc.gungu,
         date: uc.baseDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'),
         hour: String(parseInt(uc.baseTime.slice(0, 2), 10)),
@@ -221,7 +221,7 @@ exports.getLookDetail = async (req, res) => {
       nickname: post.User ? post.User.nickname : null,
       imageUrl: post.Image ? post.Image.imageUrl : null,
       date: post.date,
-      location: `${post.sido || ''} ${post.gungu || ''}`.trim(),
+      location: `${post.si || ''} ${post.gungu || ''}`.trim(),
       // weatherInfo 객체에서 필요한 정보를 추출합니다.
       temperature: post.temperature, // Weather 모델에 temperature 컬럼이 있다고 가정
       feelsLikeTemp: post.apparent_temp,
