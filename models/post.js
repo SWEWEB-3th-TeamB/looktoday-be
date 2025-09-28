@@ -98,6 +98,7 @@ class Post extends Sequelize.Model {
         db.Post.hasOne(db.Image, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
         db.Post.belongsTo(db.UltraNowcast, { foreignKey: 'weather_id', targetKey: 'id' });
         db.Post.hasOne(db.Like, { foreignKey: 'looktoday_id', sourceKey: 'looktoday_id' });
+        db.Post.hasMany(db.Like, { foreignKey: 'looktoday_id', as: 'userLike' });
     }
 }
 

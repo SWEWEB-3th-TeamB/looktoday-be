@@ -42,6 +42,7 @@ class Like extends Sequelize.Model {
         db.Like.belongsTo(db.User, { foreignKey: 'user_id', targetKey: 'user_id' });
         // Like는 Post에 속해있습니다. (looktoday_id 외래 키 생성)
         db.Like.belongsTo(db.Post, { foreignKey: 'looktoday_id', targetKey: 'looktoday_id' });
+        
     }
 }
 
