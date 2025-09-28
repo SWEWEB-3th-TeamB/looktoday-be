@@ -1,4 +1,6 @@
-const { Post, Like, Image, User, UltraNowcast } = require('../models');
+const db = require('../models');
+const { Post, Like, Image, User, UltraNowcast } = db;
+const { sequelize } = db; // sequelize 인스턴스 가져오기
 const { ApiResponse } = require('../response');
 const { Op } = require('sequelize');
 
@@ -33,13 +35,14 @@ const getWeatherCondition = (weatherFilter, minTemp, maxTemp) => {
 exports.getLooks = async (req, res) => {
   try {
     const { sort = 'latest', page = 1, limit = 20, si, gungu, startDate, endDate, weather, minTemp, maxTemp } = req.query;
+    const user_id = req.user?.user_id;
+
+    console.log("조회 요청 user_id:", user_id);
 
     const where = {isPublic: true};
     if (si) where.si = si;
     if (gungu) where.gungu = gungu;
     if (startDate && endDate) where.date = { [Op.between]: [startDate, endDate] };
-
-    let postIds = null;
 
     // 날씨 필터가 있을 경우, UltraNowcast에서 조건에 맞는 Post의 ID 목록을 먼저 찾음
     if (weather && weather !== '전체') {
@@ -76,12 +79,30 @@ exports.getLooks = async (req, res) => {
       offset: (page - 1) * parseInt(limit),
       include: [
         { model: Image, attributes: ['imageUrl'] },
-        //{ model: Weather, as: 'weatherInfo', attributes: ['description'] },
         { model: User, attributes: ['nickname'] }
       ],
       distinct: true,
     });
 
+    let finalLooks = paginatedResult.rows.map(post => post.get({ plain: true }));
+
+    if (user_id && finalLooks.length > 0) {
+      const postIds = finalLooks.map(post => post.looktoday_id);
+      const userLikes = await Like.findAll({
+        where: { user_id, looktoday_id: { [Op.in]: postIds } },
+        attributes: ['looktoday_id'],
+        raw: true,
+      });
+      const likedPostIds = new Set(userLikes.map(like => like.looktoday_id));
+      finalLooks.forEach(post => {
+        post.isLiked = likedPostIds.has(post.looktoday_id);
+      });
+    } else {
+      finalLooks.forEach(post => {
+        post.isLiked = false;
+      });
+    }
+    
     const result = {
       pagination: {
         page: parseInt(page),
@@ -89,10 +110,10 @@ exports.getLooks = async (req, res) => {
         totalPosts: paginatedResult.count,
         totalPages: Math.ceil(paginatedResult.count / limit)
       },
-      looks: paginatedResult.rows
+      looks: finalLooks
     };
     
-    return res.status(200).json(ApiResponse.success({ message: "룩 목록 조회 성공", result }));
+    return res.status(200).json(ApiResponse.success({ message: "룩 포스트 목록 조회 성공", result }));
 
   } catch (error) {
     console.error(error);
@@ -102,7 +123,10 @@ exports.getLooks = async (req, res) => {
 // BEST 10 게시물 조회
 exports.getBestLooks = async (req, res) => {
     try {
+        const user_id = req.user?.user_id;
+
         const bestLooks = await Post.findAll({
+            where: { isPublic: true },
             order: [['like_count', 'DESC']], 
             limit: 10,
             include: [
@@ -111,7 +135,26 @@ exports.getBestLooks = async (req, res) => {
             ]
         });
 
-        return res.status(200).json(ApiResponse.success({ message: "인기 게시물(Best 10) 조회 성공", result: bestLooks }));
+        let finalLooks = bestLooks.map(post => post.get({ plain: true }));
+
+        if (user_id && finalLooks.length > 0) {
+            const postIds = finalLooks.map(post => post.looktoday_id);
+            const userLikes = await Like.findAll({
+                where: { user_id, looktoday_id: { [Op.in]: postIds } },
+                attributes: ['looktoday_id'],
+                raw: true,
+            });
+            const likedPostIds = new Set(userLikes.map(like => like.looktoday_id));
+            finalLooks.forEach(post => {
+                post.isLiked = likedPostIds.has(post.looktoday_id);
+            });
+        } else {
+            finalLooks.forEach(post => {
+                post.isLiked = false;
+            });
+        }
+        
+        return res.status(200).json(ApiResponse.success({ message: "인기 게시물(Best 10) 조회 성공", result: finalLooks }));
 
     } catch (error) {
         console.error(error);
@@ -122,8 +165,8 @@ exports.getBestLooks = async (req, res) => {
 // 내 게시물 조회
 exports.getMine = async (req, res) => {
   try {
-    const userId = req.user?.user_id ?? req.user?.id;
-    if (!userId) {
+    const user_id = req.user.user_id;
+    if (!user_id) {
       return res.status(401).json(ApiResponse.fail({ code: "AUTH401", message: "로그인이 필요합니다." }));
     }
     const {
@@ -134,7 +177,7 @@ exports.getMine = async (req, res) => {
       endDate
     } = req.query;
 
-    const where = { user_id: userId };
+    const where = { user_id: user_id };
 
     // 날짜 필터링 로직
     if (period) {
@@ -194,7 +237,7 @@ exports.getMine = async (req, res) => {
 exports.getLookDetail = async (req, res) => {
   try {
     const { looktoday_id } = req.params;
-    const userId = req.user?.id;
+    const user_id = req.user?.user_id;
 
     const post = await Post.findByPk(looktoday_id, {
       include: [
@@ -210,9 +253,9 @@ exports.getLookDetail = async (req, res) => {
     }
     
     let isLiked = false;
-    if (userId) {
+    if (user_id) {
       const existingLike = await Like.findOne({
-        where: { user_id: userId, looktoday_id: post.looktoday_id }
+        where: { user_id: user_id, looktoday_id: post.looktoday_id }
       });
       if (existingLike) { isLiked = true; }
     }

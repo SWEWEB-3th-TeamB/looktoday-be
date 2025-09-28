@@ -80,7 +80,7 @@ const { authMiddleware } = require('../middlewares/authMiddleware.js');
  *       "500":
  *         description: "서버 오류"
  */
-router.get('/', looksControllers.getLooks);
+router.get('/', authMiddleware, looksControllers.getLooks);
 
 // GET /api/looks/best - BEST 10 룩 조회
 /**
@@ -95,7 +95,7 @@ router.get('/', looksControllers.getLooks);
  *          500: 
  *              description: "서버 오류"
  */
-router.get('/best', looksControllers.getBestLooks);
+router.get('/best', authMiddleware, looksControllers.getBestLooks);
 
 // GET /api/looks/me - 내 게시물 조회
 /**
@@ -169,7 +169,7 @@ router.get('/me', authMiddleware, looksControllers.getMine);
  *       500:
  *         description: "서버 오류"
  */
-router.get('/:looktoday_id', looksControllers.getLookDetail);
+router.get('/:looktoday_id', authMiddleware, looksControllers.getLookDetail);
 
 // POST /api/looks/:looktoday_id/like - 게시물 좋아요
 /**
