@@ -4,6 +4,9 @@ const db = require('../models');
 const { UltraNowcast } = db;
 const locationMap = require('../data/locationMap');
 
+// 공통 유틸: 최근 N시간, 10분 단위 fallback
+const { basesWithFallback } = require('../utils/time');
+
 // --- 코드/라벨 매핑 ---
 const PTY_LABEL = {
   '0': '강수 없음', '1': '비', '2': '비/눈', '3': '눈',
@@ -27,32 +30,7 @@ function getNxNy(si, gungu) {
   return arr.find(d => d.district === gungu) || null;
 }
 
-// 현재 시각 기준 정시(HH00)
-function currentBase() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  const H = String(now.getHours()).padStart(2, '0');
-  return { baseDate: `${y}${m}${d}`, baseTime: `${H}00` };
-}
-
-// baseDate/time 시간만 ±h 이동
-function shift(baseDate, baseTime, hourOffset) {
-  const y = Number(baseDate.slice(0, 4));
-  const mo = Number(baseDate.slice(4, 6)) - 1;
-  const da = Number(baseDate.slice(6, 8));
-  const H = Number(baseTime.slice(0, 2));
-  const dt = new Date(y, mo, da, H, 0, 0);
-  dt.setHours(dt.getHours() + hourOffset);
-  const Y = dt.getFullYear();
-  const M = String(dt.getMonth() + 1).padStart(2, '0');
-  const D = String(dt.getDate()).padStart(2, '0');
-  const HH = String(dt.getHours() + 0).padStart(2, '0');
-  return { baseDate: `${Y}${M}${D}`, baseTime: `${HH}00` };
-}
-
-// row(가로형 1행) -> [{ category, obsrValue }] 배열로 변환
+// row(가로형 1행) → [{ category, obsrValue }] 배열로 변환
 function rowToItems(row) {
   const items = [];
   if (row.tmp != null) items.push({ category: 'T1H', obsrValue: row.tmp });
@@ -88,7 +66,7 @@ function buildPayload(items) {
  * @swagger
  * tags:
  *   name: WeatherNow
- *   description: 초단기 실황 NOW 조회 API
+ *   description: 초단기 실황 NOW 조회 API (10분 단위 폴백 지원)
  */
 
 /**
@@ -96,7 +74,7 @@ function buildPayload(items) {
  * /api/weather/now:
  *   get:
  *     summary: "초단기 실황 NOW 조회 (시·군·구 기준)"
- *     description: "현재 정시 기준으로, 없으면 -1h/-2h 순으로 폴백하여 가장 최근 관측값을 반환합니다."
+ *     description: "가장 최근 10분 단위 기준시각부터 과거로 최대 3시간까지 폴백하여 가장 최근 관측값을 반환합니다."
  *     tags: [WeatherNow]
  *     parameters:
  *       - in: query
@@ -112,35 +90,6 @@ function buildPayload(items) {
  *     responses:
  *       200:
  *         description: "조회 성공"
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 si: { type: string, example: "서울특별시" }
- *                 gungu: { type: string, example: "노원구" }
- *                 nx: { type: integer, example: 61 }
- *                 ny: { type: integer, example: 127 }
- *                 baseDate: { type: string, example: "20250828" }
- *                 baseTime: { type: string, example: "1300" }
- *                 weather:
- *                   type: object
- *                   properties:
- *                     기온: { type: string, example: "28℃" }
- *                     습도: { type: string, example: "65%" }
- *                     풍속: { type: string, example: "1.3m/s" }
- *                     풍향: { type: string, example: "304°" }
- *                     강수형태: { type: string, example: "강수 없음" }
- *                 raw:
- *                   type: object
- *                   properties:
- *                     T1H: { type: string, example: "28.0" }
- *                     REH: { type: string, example: "65" }
- *                     WSD: { type: string, example: "1.3" }
- *                     VEC: { type: string, example: "304" }
- *                     UUU: { type: string, example: "0.3" }
- *                     VVV: { type: string, example: "-0.2" }
- *                     PTY: { type: string, example: "0" }
  *       204:
  *         description: "콘텐츠 없음 (해당 시각 데이터 미존재)"
  *       400:
@@ -158,48 +107,34 @@ router.get('/now', async (req, res) => {
     }
 
     const loc = getNxNy(si, gungu);
-    if (!loc) {
-      return res.status(404).json({ message: `좌표를 찾을 수 없습니다: ${si} ${gungu}` });
-    }
+    if (!loc) return res.status(404).json({ message: `좌표를 찾을 수 없습니다: ${si} ${gungu}` });
+
     const { nx, ny } = loc;
 
-    // 현재 정시 → 없으면 -1h → -2h 폴백
-    const nowBase = currentBase();
-    const candidates = [
-      nowBase,
-      shift(nowBase.baseDate, nowBase.baseTime, -1),
-      shift(nowBase.baseDate, nowBase.baseTime, -2),
-    ];
-
+    // ✅ 최근 3시간, 10분 단위로 DB 조회
     let chosen = null;
     let rows = null;
 
-    for (const c of candidates) {
+    for (const { baseDate, baseTime } of basesWithFallback(3)) {
       const found = await UltraNowcast.findOne({
-        where: { baseDate: c.baseDate, baseTime: c.baseTime, nx, ny },
+        where: { baseDate, baseTime, nx, ny },
       });
       if (found) {
-        chosen = c;
-        rows = rowToItems(found);   // ← 1행을 카테고리 배열로 변환
+        chosen = { baseDate, baseTime };
+        rows = rowToItems(found);
         break;
       }
     }
 
-    if (!rows) {
-      return res.status(204).json(); // No Content
-    }
+    if (!rows) return res.status(204).send();
 
     const { summary, raw } = buildPayload(rows);
-
     return res.json({
-      si,
-      gungu,
-      nx,
-      ny,
+      si, gungu, nx, ny,
       baseDate: chosen.baseDate,
       baseTime: chosen.baseTime,
-      weather: summary,  // 한글/단위 포함 요약
-      raw,               // 원시 카테고리 맵(옵션)
+      weather: summary,
+      raw,
     });
   } catch (err) {
     console.error('[weather/now] error', err);

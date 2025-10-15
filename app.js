@@ -22,11 +22,12 @@ const weatherRouter = require('./routes/weather');
 const weatherNowRoutes = require('./routes/weatherNow');
 const sunRouter = require('./routes/sun');
 const weatherProxy = require("./routes/weatherProxy"); // 날씨API cors 해결코드
-const userRoutes = require('./routes/user');   
+const userRoutes = require('./routes/user');
 
 // --- Cron ---
 const weatherCron = require('./services/weatherCron');
 const postWeatherCron = require('./services/postWeatherCron.js');
+
 // --- ENV ---
 const PORT = process.env.PORT || 3000;
 
@@ -44,9 +45,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: { maxAge: 1000 * 60 * 10 }
-}))
-
-// app.options('*', cors());
+}));
 
 app.use(morgan('dev'));
 app.use('/', express.static(path.join(__dirname, 'public')));
@@ -58,9 +57,7 @@ if (process.env.SWAGGER !== 'off') {
   try {
     const swaggerJsdoc = require('swagger-jsdoc');
     const swaggerUi = require('swagger-ui-express');
-    const path = require('path'); // 절대경로 글롭에 필요
 
-    // ✅ 라우트 파일을 절대경로로 스캔(서브폴더 포함)
     const swaggerFiles = [
       path.join(__dirname, 'routes', '*.js'),
       path.join(__dirname, 'routes', '**', '*.js'),
@@ -84,7 +81,7 @@ if (process.env.SWAGGER !== 'off') {
           },
         },
       },
-      apis: swaggerFiles, // ✅ 절대경로 글롭 사용
+      apis: swaggerFiles,
     };
 
     const specs = swaggerJsdoc(options);
@@ -101,11 +98,10 @@ if (process.env.SWAGGER !== 'off') {
 }
 
 // --- Routes ---
-
 app.use('/api/weather', weatherRouter);
 app.use('/api/weather', weatherNowRoutes);
-app.use('/api/weather-proxy', weatherProxy); // 날씨API cors 문제 해결 추가 코드
-app.use('/api/users', userRoutes);  //메인용
+app.use('/api/weather-proxy', weatherProxy);
+app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', mypageRoutes);
 app.use('/api/looks', looksRoutes);
@@ -118,7 +114,6 @@ async function ensureUltraNowcastSchema() {
   const qi = db.sequelize.getQueryInterface();
   const Sequelize = db.Sequelize;
 
-  // 테이블 스키마 읽기 (없으면 패스)
   let table = {};
   try {
     table = await qi.describeTable('ultra_nowcast');
@@ -126,7 +121,6 @@ async function ensureUltraNowcastSchema() {
     return;
   }
 
-  // 1) si / gungu 컬럼(없으면 추가)  — NOT NULL 강제는 상황 따라 선택
   if (!table.si) {
     await qi.addColumn('ultra_nowcast', 'si', {
       type: Sequelize.STRING(50),
@@ -144,12 +138,7 @@ async function ensureUltraNowcastSchema() {
     console.log('[bootstrap] ultra_nowcast.gungu 컬럼 추가');
   }
 
-  // 2) (중요) 더 이상 category / category_name / obsrValue 사용 안 함 → 관련 조작 제거
-  //    예전 코드: category_name 추가/백필, category 기반 인덱스 생성 등은 모두 스킵
-
-  // 3) 가로형 업서트에 맞는 유니크 인덱스 보장 (si,gungu,baseDate,baseTime,nx,ny)
   try {
-    // MySQL은 IF NOT EXISTS 미지원 → 존재여부 확인 후 생성
     const [rows] = await db.sequelize.query(`
       SELECT 1
       FROM INFORMATION_SCHEMA.STATISTICS
@@ -170,7 +159,6 @@ async function ensureUltraNowcastSchema() {
     console.warn('[bootstrap] uk_nowcast_key 인덱스 확인/추가 실패:', e.message);
   }
 
-  // 4) (선택) si/gungu NULL 자동 보정 — locationMap 기준 (있을 때만)
   try {
     const locationMap = require('./data/locationMap');
     let total = 0;
@@ -196,28 +184,33 @@ async function ensureUltraNowcastSchema() {
 db.sequelize.authenticate()
   .then(async () => {
     console.log('DB 연결 성공');
-
-    // ✅ 개발용: 부팅 시 테이블/컬럼 자동 동기화
-    // try {
-    //   if (process.env.SYNC_ON_BOOT === '1') {
-    //     await db.sequelize.sync({ alter: true });
-    //     console.log('[sequelize] sync({ alter: true }) 완료 - 테이블/컬럼 동기화');
-    //   } else {
-    //     console.log('[sequelize] sync 스킵 (SYNC_ON_BOOT 환경변수 미설정)');
-    //   }
-    // } catch (e) {
-    //   console.error('[sequelize] sync 실패:', e);
-    // }
-
-    // 스키마 보정
     await ensureUltraNowcastSchema();
 
-    try { weatherCron.start?.(); } catch(e) { console.error('[cron] weatherCron 시작 실패:', e); }
-    try { postWeatherCron.start?.(); } catch(e) { console.error('[cron] postWeatherCron 시작 실패:', e); }
-
+    // ✅ 서버를 먼저 띄움
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`${PORT}번 포트에서 대기 중`);
     });
+
+    // ✅ 부팅 후 비동기로 날씨 수집 실행
+    (async () => {
+      try {
+        await weatherCron.runOnce?.();
+      } catch (e) {
+        console.error('[cron] 부팅 1회 수집 실패:', e?.message);
+      }
+
+      try {
+        weatherCron.start?.();
+      } catch (e) {
+        console.error('[cron] weatherCron 시작 실패:', e);
+      }
+
+      try {
+        postWeatherCron.start?.();
+      } catch (e) {
+        console.error('[cron] postWeatherCron 시작 실패:', e);
+      }
+    })();
   })
   .catch((err) => {
     console.error('DB 연결 실패:', err);
