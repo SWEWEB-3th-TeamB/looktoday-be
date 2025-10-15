@@ -4,8 +4,11 @@ const { UltraNowcast } = db;
 const locationMap = require('../data/locationMap');
 const { ApiResponse } = require('../response');
 
-// ✅ KST 정시 계산 유틸
+// KST 기준 시각 유틸 (10분 단위 + fallback)
 const { currentBaseKST, basesWithFallback, ZONE } = require('../utils/time');
+
+// ✅ 여기! 서비스 이름이 ultraNowcastService.js 라면 아래 require 경로처럼!
+const { fetchUltraNowcastWithFallback } = require('../services/ultraNowcastService');
 
 /** 풍향(deg) → 한글 방위 */
 function windDirKo(deg) {
@@ -42,29 +45,21 @@ const PTY_LABEL = {
 
 // ---------- 지역 정규화 & 좌표 매핑 ----------
 const normCity = (s) => String(s ?? '')
-  .trim()
-  .replace(/특별시|광역시/g, '시')
-  .replace(/시$/, '')
-  .replace(/\s+/g, '');
-
+  .trim().replace(/특별시|광역시/g, '시').replace(/시$/, '').replace(/\s+/g, '');
 const normGu = (s) => String(s ?? '')
-  .trim()
-  .replace(/구$/, '')
-  .replace(/\s+/g, '');
+  .trim().replace(/구$/, '').replace(/\s+/g, '');
 
-/** 시/군구 → nx,ny  (키/표기 차이를 최대한 흡수) */
+/** 시/군구 → nx,ny  (표기차 흡수) */
 function getNxNyFlexible(siRaw, gunguRaw) {
   const siKeyNorm = normCity(siRaw);
   const guKeyNorm = normGu(gunguRaw);
 
-  // 1) 시도 키 매칭 (locationMap의 실제 키를 찾아줌)
   const cityKey = Object.keys(locationMap).find(k => normCity(k) === siKeyNorm);
   if (!cityKey) return null;
 
   const arr = locationMap[cityKey];
   if (!Array.isArray(arr)) return null;
 
-  // 2) 구/군 매칭 (district 필드 기준, 표기차 흡수)
   const found = arr.find(d => {
     const cand = d.district ?? d.gu ?? d.name ?? '';
     const nk = normGu(cand);
@@ -77,8 +72,7 @@ function getNxNyFlexible(siRaw, gunguRaw) {
   return { nx, ny };
 }
 
-// ---------- DB row 변환 ----------
-/** row(가로형 1행) → [{category, obsrValue}] 배열로 변환 */
+// ---------- DB row → 카테고리 배열 ----------
 function rowToItems(row) {
   const items = [];
   if (row.tmp != null) items.push({ category: 'T1H', obsrValue: row.tmp });
@@ -88,12 +82,11 @@ function rowToItems(row) {
   if (row.uuu != null) items.push({ category: 'UUU', obsrValue: row.uuu });
   if (row.vvv != null) items.push({ category: 'VVV', obsrValue: row.vvv });
   if (row.pty != null) items.push({ category: 'PTY', obsrValue: row.pty });
-  if (row.pcp != null) items.push({ category: 'RN1', obsrValue: row.pcp }); // 강수량은 RN1로
+  if (row.pcp != null) items.push({ category: 'RN1', obsrValue: row.pcp });
   if (row.lgt != null) items.push({ category: 'LGT', obsrValue: row.lgt });
   return items;
 }
 
-/** 카테고리 배열 → 요약/원시 맵 */
 function buildMaps(rows) {
   const byCat = {};
   for (const r of rows) byCat[r.category] = String(r.obsrValue);
@@ -110,7 +103,7 @@ function buildMaps(rows) {
     '체감온도': feelsLikeC(tmp, reh),
     '습도': reh,
     '강수량': rn1,
-    '강수확률': null,            // DB 실황에는 POP 없음
+    '강수확률': null,
     '풍속': wsd,
     '풍향': vec != null ? `${windDirKo(vec)} (${vec}°)` : null,
     '날씨': pty ? (PTY_LABEL[pty] || `코드 ${pty}`) : null,
@@ -119,25 +112,23 @@ function buildMaps(rows) {
   return { summary, raw: byCat };
 }
 
-// ---------- Core 함수 (req/res 없이 재사용 가능) ----------
+// ---------- Core ----------
 async function getWeatherCore(siInput, gunguInput) {
   const si = normCity(siInput);
   const gungu = normGu(gunguInput);
-
   if (!si || !gungu) {
     throw { code: 'WEATHER400', message: '시, 군구 정보가 필요합니다.' };
   }
 
   const loc = getNxNyFlexible(si, gungu);
-  if (!loc) {
-    throw { code: 'WEATHER404', message: `좌표를 찾을 수 없습니다: ${siInput} ${gunguInput}` };
-  }
+  if (!loc) throw { code: 'WEATHER404', message: `좌표를 찾을 수 없습니다: ${siInput} ${gunguInput}` };
   const { nx, ny } = loc;
 
   let chosen = null;
   let rows = null;
   let originalRow = null;
 
+  // 1) DB에서 최근 3시간(10분 단위) 검색
   for (const { baseDate, baseTime } of basesWithFallback(3)) {
     const found = await UltraNowcast.findOne({
       where: { baseDate, baseTime, nx, ny },
@@ -151,7 +142,23 @@ async function getWeatherCore(siInput, gunguInput) {
     }
   }
 
-  if (!rows) return null;
+  // 2) ✅ 없으면 즉시 수집 후 재조회
+  if (!rows) {
+    await fetchUltraNowcastWithFallback({ nx, ny, hoursBack: 1 }); // 1시간 롤백 수집
+    for (const { baseDate, baseTime } of basesWithFallback(3)) {
+      const found = await UltraNowcast.findOne({
+        where: { baseDate, baseTime, nx, ny },
+        order: [['id', 'DESC']],
+      });
+      if (found) {
+        chosen = { baseDate, baseTime };
+        rows = rowToItems(found);
+        originalRow = found;
+        break;
+      }
+    }
+    if (!rows) return null; // 여전히 없으면 204
+  }
 
   const { summary, raw } = buildMaps(rows);
 
@@ -164,55 +171,40 @@ async function getWeatherCore(siInput, gunguInput) {
       '표준시': ZONE,
     },
     data: {
-      summary,
-      raw,
+      summary, raw,
       originalRow,
       meta: { baseDate: chosen.baseDate, baseTime: chosen.baseTime, nx, ny },
     },
   };
 }
 
-// ---------- Express 라우트 핸들러 ----------
+// ---------- Express 핸들러 ----------
 exports.getWeather = async (req, res) => {
   try {
-    // 디버그용 현재 기준시각 헤더
     const probe = currentBaseKST();
     res.setHeader('X-Base-Date', probe.baseDate);
     res.setHeader('X-Base-Time', probe.baseTime);
     res.setHeader('X-Base-TZ', ZONE);
 
     const result = await getWeatherCore(req.query.si, req.query.gungu);
-
-    if (!result) {
-      // 데이터가 진짜로 없는 경우
-      return res.status(204).send();
-    }
+    if (!result) return res.status(204).send(); // 여전히 없으면 No Content
 
     res.set('Cache-Control', 'public, max-age=60');
     return res.status(200).json(
-      ApiResponse.success({
-        code: 'WEATHER200',
-        message: '날씨 데이터 조회 성공',
-        result,
-      })
+      ApiResponse.success({ code: 'WEATHER200', message: '날씨 데이터 조회 성공', result })
     );
   } catch (err) {
     if (err && err.code && err.message) {
       const status = err.code === 'WEATHER400' ? 400
-                    : err.code === 'WEATHER404' ? 404
-                    : 400;
+                  : err.code === 'WEATHER404' ? 404
+                  : 400;
       return res.status(status).json(ApiResponse.fail(err));
     }
     console.error('[GET /api/weather] error', err);
     return res.status(500).json(
-      ApiResponse.fail({
-        code: 'WEATHER500',
-        message: '서버 오류',
-        error: { detail: err?.message }
-      })
+      ApiResponse.fail({ code: 'WEATHER500', message: '서버 오류', error: { detail: err?.message } })
     );
   }
 };
 
-// Core 함수 외부 재사용을 위해 export
 exports.getWeatherCore = getWeatherCore;
