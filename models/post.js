@@ -55,6 +55,11 @@ class Post extends Sequelize.Model {
                  type: DataTypes.FLOAT,
                 allowNull: true
             },
+            //습도
+            humidity: {
+                type: DataTypes.FLOAT,
+                allowNull: true,
+            },
             // 체감온도
             apparent_temp: {
                 type: Sequelize.ENUM('무더워요', '더워요', '따뜻해요', '시원해요', '쌀쌀해요', '추워요'),

@@ -55,6 +55,7 @@ exports.createPost = async (user, body, file) => {
     const previousCount = await Post.count({ where: { user_id } }); // 지금까지 쓴 게시글 수 확인
     const weatherRow = await findWeather(si, gungu, date, hour); // 날씨 조회 시도
     const temperature = weatherRow ? weatherRow.tmp : null;
+    const humidity = weatherRow ? weatherRow.reh : null;
 
     const newPost = await Post.create({
         user_id,
@@ -69,6 +70,7 @@ exports.createPost = async (user, body, file) => {
         hour,
         weather_id: weatherRow ? weatherRow.id : null, // 없으면 null
         temperature,
+        humidity,
         like_count: 0,
     });
 
@@ -136,12 +138,14 @@ exports.updatePost = async (looktoday_id, user, body, file) => {
     if (weatherRow) {
         updatedWeatherData.weather_id = weatherRow.id;
         updatedWeatherData.temperature = weatherRow.tmp;
+        updatedWeatherData.humidity = weatherRow.reh;
     }
 
     // 변경됐는데 날씨 정보가 없는 경우 -> null로 설정
     else if (si || gungu || date || hour) {
         updatedWeatherData.weather_id = null;
         updatedWeatherData.temperature = null;
+        updatedWeatherData.humidity = null;
     }
 
     await post.update({ // 업데이트
