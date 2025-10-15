@@ -266,10 +266,10 @@ exports.getLookDetail = async (req, res) => {
       date: post.date,
       location: `${post.si || ''} ${post.gungu || ''}`.trim(),
       // weatherInfo 객체에서 필요한 정보를 추출합니다.
-      temperature: post.temperature, // Weather 모델에 temperature 컬럼이 있다고 가정
+      temperature: post.temperature, 
+      humidity: post.humidity,
       feelsLikeTemp: post.apparent_temp,
       feelsLikeHumid: post.apparent_humidity,
-      weatherDescription: '날씨 정보 없음', 
       comment: post.comment,
       likeCount: post.like_count,
       isLiked: isLiked
