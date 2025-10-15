@@ -183,7 +183,6 @@ async function ensureUltraNowcastSchema() {
 // --- Start ---
 db.sequelize.authenticate()
   .then(async () => {
-    await db.sequelize.sync({ alter: true });
     console.log('DB 연결 성공');
     await ensureUltraNowcastSchema();
     
