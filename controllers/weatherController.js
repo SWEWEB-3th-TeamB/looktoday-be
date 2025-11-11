@@ -7,7 +7,10 @@ const { ApiResponse } = require('../response');
 // KST 기준 시각 유틸 (10분 단위 + fallback)
 const { currentBaseKST, basesWithFallback, ZONE } = require('../utils/time');
 
-// ✅ 여기! 서비스 이름이 ultraNowcastService.js 라면 아래 require 경로처럼!
+// ✅ fallback 매칭용 (느슨/별칭/한줄쿼리 지원)
+const { getLatLonBySiGu, getByQuery } = require('../utils/locationLookup');
+
+// ✅ 초단기실황 수집 서비스
 const { fetchUltraNowcastWithFallback } = require('../services/ultraNowcastService');
 
 /** 풍향(deg) → 한글 방위 */
@@ -49,27 +52,48 @@ const normCity = (s) => String(s ?? '')
 const normGu = (s) => String(s ?? '')
   .trim().replace(/구$/, '').replace(/\s+/g, '');
 
-/** 시/군구 → nx,ny  (표기차 흡수) */
+/** 시/군구 → nx,ny (표기차 흡수 + 안전한 fallback) */
 function getNxNyFlexible(siRaw, gunguRaw) {
+  // 0) 기존 strict 매칭 우선
   const siKeyNorm = normCity(siRaw);
   const guKeyNorm = normGu(gunguRaw);
 
   const cityKey = Object.keys(locationMap).find(k => normCity(k) === siKeyNorm);
-  if (!cityKey) return null;
+  if (cityKey) {
+    const arr = locationMap[cityKey];
+    if (Array.isArray(arr)) {
+      const found = arr.find(d => {
+        const cand = d.district ?? d.gu ?? d.name ?? '';
+        const nk = normGu(cand);
+        // 기존 비교 + 약식/접두사 허용 (최소 수정)
+        return nk === guKeyNorm
+          || nk.replace(/(시|군|구)$/, '') === guKeyNorm
+          || nk.startsWith(guKeyNorm);
+      });
+      if (found && found.nx != null && found.ny != null) {
+        return { nx: found.nx, ny: found.ny };
+      }
+    }
+  }
 
-  const arr = locationMap[cityKey];
-  if (!Array.isArray(arr)) return null;
+  // 1) 실패 시: 정확/느슨 매칭 fallback
+  try {
+    const viaLookup = getLatLonBySiGu(siRaw, gunguRaw);
+    if (viaLookup && viaLookup.nx != null && viaLookup.ny != null) {
+      return { nx: viaLookup.nx, ny: viaLookup.ny };
+    }
+  } catch (_) { /* noop */ }
 
-  const found = arr.find(d => {
-    const cand = d.district ?? d.gu ?? d.name ?? '';
-    const nk = normGu(cand);
-    return nk === guKeyNorm || nk.replace(/(시|군|구)$/, '') === guKeyNorm;
-  });
+  // 2) 한 줄 쿼리("서울 강남") 대응
+  try {
+    const q = `${siRaw ?? ''} ${gunguRaw ?? ''}`.trim();
+    const viaQuery = getByQuery(q);
+    if (viaQuery && viaQuery.nx != null && viaQuery.ny != null) {
+      return { nx: viaQuery.nx, ny: viaQuery.ny };
+    }
+  } catch (_) { /* noop */ }
 
-  if (!found) return null;
-  const { nx, ny } = found;
-  if (nx == null || ny == null) return null;
-  return { nx, ny };
+  return null;
 }
 
 // ---------- DB row → 카테고리 배열 ----------
@@ -112,15 +136,29 @@ function buildMaps(rows) {
   return { summary, raw: byCat };
 }
 
+// ---------- 내부 유틸: 짧은 타임아웃 래퍼(로딩 지연 방지) ----------
+const FETCH_TIMEOUT_MS = 1500;
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, rej) =>
+      setTimeout(
+        () => rej(Object.assign(new Error('FETCH_TIMEOUT'), { code: 'FETCH_TIMEOUT' })),
+        ms
+      )
+    ),
+  ]);
+}
+
 // ---------- Core ----------
 async function getWeatherCore(siInput, gunguInput) {
-  const si = normCity(siInput);
-  const gungu = normGu(gunguInput);
-  if (!si || !gungu) {
+  const siNorm = String(siInput ?? '').trim();
+  const guNorm = String(gunguInput ?? '').trim();
+  if (!siNorm || !guNorm) {
     throw { code: 'WEATHER400', message: '시, 군구 정보가 필요합니다.' };
   }
 
-  const loc = getNxNyFlexible(si, gungu);
+  const loc = getNxNyFlexible(siNorm, guNorm);
   if (!loc) throw { code: 'WEATHER404', message: `좌표를 찾을 수 없습니다: ${siInput} ${gunguInput}` };
   const { nx, ny } = loc;
 
@@ -128,7 +166,7 @@ async function getWeatherCore(siInput, gunguInput) {
   let rows = null;
   let originalRow = null;
 
-  // 1) DB에서 최근 3시간(10분 단위) 검색
+  // 1) DB에서 최근 3슬롯(10분 단위) 검색
   for (const { baseDate, baseTime } of basesWithFallback(3)) {
     const found = await UltraNowcast.findOne({
       where: { baseDate, baseTime, nx, ny },
@@ -142,9 +180,21 @@ async function getWeatherCore(siInput, gunguInput) {
     }
   }
 
-  // 2) ✅ 없으면 즉시 수집 후 재조회
+  // 2) 없으면 즉시 수집 시도(최대 1.5s만 대기) 후 재조회
   if (!rows) {
-    await fetchUltraNowcastWithFallback({ nx, ny, hoursBack: 1 }); // 1시간 롤백 수집
+    try {
+      await withTimeout(
+        fetchUltraNowcastWithFallback({ nx, ny, hoursBack: 1 }),
+        FETCH_TIMEOUT_MS
+      );
+    } catch (e) {
+      // 429/타임아웃 등은 사용자 응답 지연 방지를 위해 무시하고 진행
+      if (e?.code !== 'FETCH_TIMEOUT' && e?.code !== 'RATE_LIMIT') {
+        console.warn('[UltraNowcast fetch warn]', e?.message || e);
+      }
+    }
+
+    // 재조회 (최근 3슬롯)
     for (const { baseDate, baseTime } of basesWithFallback(3)) {
       const found = await UltraNowcast.findOne({
         where: { baseDate, baseTime, nx, ny },
@@ -157,6 +207,23 @@ async function getWeatherCore(siInput, gunguInput) {
         break;
       }
     }
+
+    // 그래도 없으면 최대 6슬롯까지 과거 허용(사용자 체감 보호)
+    if (!rows) {
+      for (const { baseDate, baseTime } of basesWithFallback(6)) {
+        const found = await UltraNowcast.findOne({
+          where: { baseDate, baseTime, nx, ny },
+          order: [['id', 'DESC']],
+        });
+        if (found) {
+          chosen = { baseDate, baseTime };
+          rows = rowToItems(found);
+          originalRow = found;
+          break;
+        }
+      }
+    }
+
     if (!rows) return null; // 여전히 없으면 204
   }
 
@@ -208,3 +275,4 @@ exports.getWeather = async (req, res) => {
 };
 
 exports.getWeatherCore = getWeatherCore;
+

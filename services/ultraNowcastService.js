@@ -27,16 +27,57 @@ const KMA_NORMAL = axios.create({
 });
 
 // IP 경유 + Host 헤더 강제 (인증서 체인 검증 유지, SNI에 IP 설정)
-// 이 클라이언트는 TLS 검증을 끄지 않고 Host 헤더만 강제하는 방식입니다.
 const KMA_VIA_IP = axios.create({
   baseURL: `https://${KMA_IP}${KMA_PATH}`,
   timeout: 25000,
   headers: { Host: KMA_HOST },
   httpsAgent: new https.Agent({
     rejectUnauthorized: true,
-    servername: KMA_IP, // SNI를 IP로 설정 (서버가 IP용 cert를 내보낼 때 대비)
+    servername: KMA_IP,
   }),
 });
+
+// =====================
+// 🔒 Rate limit + Retry
+// =====================
+let lastCallAt = 0;
+const MIN_INTERVAL_MS = 150; // ≈ 6~7 QPS
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function rateLimit() {
+  const now = Date.now();
+  const wait = Math.max(0, lastCallAt + MIN_INTERVAL_MS - now);
+  if (wait) await sleep(wait);
+  lastCallAt = Date.now();
+}
+
+async function requestWithRetry(doRequest, maxRetry = 2) {
+  let attempt = 0;
+  while (true) {
+    try {
+      await rateLimit();
+      return await doRequest();
+    } catch (e) {
+      const status = e?.response?.status;
+      const retriable =
+        status === 429 || (status >= 500 && status < 600) || e?.code === 'ECONNABORTED';
+
+      if (!retriable || attempt >= maxRetry) throw e;
+
+      const backoff = 500 * Math.pow(2, attempt) + Math.floor(Math.random() * 200); // 지수+지터
+      attempt += 1;
+      await sleep(backoff);
+    }
+  }
+}
+
+// ====== 최신 슬롯 막 오픈 직후 스킵(선택: 3분) ======
+function shouldSkipNewestSlot() {
+  const now = new Date();
+  const m = now.getMinutes();
+  const slot = Math.floor(m / 10) * 10;
+  return (m - slot) < 3; // 슬롯 시작 후 3분 이내면 skip
+}
 
 function getSiGunguByXY(nx, ny) {
   for (const si of Object.keys(locationMap)) {
@@ -69,25 +110,27 @@ function normalizeValue(cat, v) {
   return toNumberSafe(v);
 }
 
-/** KMA 한 번 호출: 도메인으로 시도, 인증서 altname 에러면 IP 경유로 재시도 */
+/** KMA 한 번 호출: 도메인으로 시도, 인증서 에러면 IP 경유 재시도 (레이트리밋+백오프 적용) */
 async function callKmaOnce({ baseDate, baseTime, nx, ny }) {
   const params = buildParams({ baseDate, baseTime, nx, ny });
 
-  // 1) 정상 도메인 시도
+  // 1) 정상 도메인 시도 (+ 재시도/레이트리밋)
   try {
-    const { data } = await KMA_NORMAL.get('/getUltraSrtNcst', { params });
+    const { data } = await requestWithRetry(
+      () => KMA_NORMAL.get('/getUltraSrtNcst', { params })
+    );
     return data;
   } catch (e) {
-    // 2) 인증서 호스트명 불일치일 경우(대표 코드)
+    // 2) 인증서 호스트명 불일치 시 IP로 재시도 (+ 재시도/레이트리밋)
     const code = String(e?.code || '');
     const msg = e?.message || '';
     if (code === 'ERR_TLS_CERT_ALTNAME_INVALID' || msg.includes('Hostname/IP does not match')) {
-      // IP로 재시도
       try {
-        const { data } = await KMA_VIA_IP.get('/getUltraSrtNcst', { params });
+        const { data } = await requestWithRetry(
+          () => KMA_VIA_IP.get('/getUltraSrtNcst', { params })
+        );
         return data;
       } catch (e2) {
-        // IP 재시도도 실패하면 원래 에러 포함해서 던짐
         const err = new Error('KMA 호출 실패 (도메인 및 IP 재시도 모두 실패)');
         err.original = e;
         err.retry = e2;
@@ -101,7 +144,14 @@ async function callKmaOnce({ baseDate, baseTime, nx, ny }) {
 
 /** KMA를 10분 단위로 과거로 롤백하며 최초 유효 응답을 upsert */
 async function fetchUltraNowcastWithFallback({ nx, ny, si: siOverride, gungu: gunguOverride, hoursBack = 1 }) {
-  for (const { baseDate, baseTime } of basesWithFallback(hoursBack)) {
+  // bases 목록 준비
+  let baseList = Array.from(basesWithFallback(hoursBack));
+  if (shouldSkipNewestSlot() && baseList.length > 1) {
+    // 최신 슬롯을 잠깐 건너뛰고 바로 이전 슬롯부터 시도
+    baseList = baseList.slice(1);
+  }
+
+  for (const { baseDate, baseTime } of baseList) {
     try {
       console.log('[UltraNowcast:req]', { baseDate, baseTime, nx, ny });
       const data = await callKmaOnce({ baseDate, baseTime, nx, ny });
@@ -124,16 +174,16 @@ async function fetchUltraNowcastWithFallback({ nx, ny, si: siOverride, gungu: gu
       const si = siOverride ?? mapped.si ?? '';
       const gungu = gunguOverride ?? mapped.gungu ?? '';
 
-// ⚠️ 저장 시간/좌표는 "요청 슬롯/인자"를 그대로 사용 (응답값으로 덮어쓰지 않음)
-const row = {
-  baseDate: baseDate,
-  baseTime: baseTime,           // ← 응답의 items[0].baseTime 쓰지 않기
-  nx: nx,
-  ny: ny,
-  si, gungu,
-  tmp: null, reh: null, wsd: null, vec: null,
-  uuu: null, vvv: null, pty: null, pcp: null, lgt: null,
-};
+      // ⚠️ 저장 시간/좌표는 "요청 슬롯/인자"를 그대로 사용 (응답값으로 덮어쓰지 않음)
+      const row = {
+        baseDate: baseDate,
+        baseTime: baseTime,           // ← 응답 baseTime 사용하지 않음
+        nx: nx,
+        ny: ny,
+        si, gungu,
+        tmp: null, reh: null, wsd: null, vec: null,
+        uuu: null, vvv: null, pty: null, pcp: null, lgt: null,
+      };
 
       for (const it of items) {
         const cat = String(it.category || '').toUpperCase();
@@ -149,7 +199,6 @@ const row = {
       });
       return { baseDate: row.baseDate, baseTime: row.baseTime }; // 성공
     } catch (err) {
-      // 더 많은 디버그 정보를 로그로 남깁니다.
       console.warn('[UltraNowcast:error]', {
         code: err?.code,
         message: err?.message,
@@ -158,6 +207,7 @@ const row = {
         response: err?.response?.data ?? null,
       });
       // 다음 후보 시각으로 계속 시도
+      // (429/ECONNABORTED 등은 requestWithRetry에서 내부 재시도 후 여기로 올라옴)
     }
   }
   return null; // 전부 실패
