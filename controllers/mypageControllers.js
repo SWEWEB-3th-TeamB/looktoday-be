@@ -308,6 +308,7 @@ exports.getMyLikes = async (req, res) => {
     const whereClause = { user_id: req.user.user_id, ...dataFilter };
 
     const {rows, count} = await Like.findAndCountAll({
+      where: whereClause,
       include: [
         {
           model: Post,
