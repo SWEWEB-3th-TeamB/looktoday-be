@@ -164,6 +164,6 @@ router.put('/:looktoday_id', isLoggedIn, upload.single('image'), lookPostControl
 router.delete('/:looktoday_id', isLoggedIn, lookPostController.deletePost);
 
 // GET /api/nextLookPostId
-router.get('/nextLookPostId', isLoggedIn, lookPostControllers.getNextPostNumber);
+router.get('/nextLookPostId', isLoggedIn, lookPostController.getNextPostNumber);
 
 module.exports = router;
