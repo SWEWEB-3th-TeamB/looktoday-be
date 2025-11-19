@@ -1,10 +1,35 @@
-// controllers/lookPostControllers.js
+// controllers/lookPostControllers.js 
 const lookPostService = require('../services/lookPostService');
 const { ApiResponse } = require('../response');
 
+/**
+ * @description GET /api/nextLookPostId - 로그인한 사용자의 다음에 등록할 게시물 번호(post_count)를 조회
+ */
+exports.getNextPostNumber = async (req, res) => {
+    try {
+        const nextPostNumber = await lookPostService.getNextPostNumber(req.user);
+
+        return res.status(200).json(ApiResponse.success({
+            message: '다음 게시물 번호 조회 성공',
+            result: {
+                currentPostNumber: nextPostNumber
+            }
+        }));
+
+    } catch (error) {
+        console.error(error);
+        const statusCode = error.statusCode || 500;
+        
+        return res.status(statusCode).json(ApiResponse.fail({
+            message: error.message || "서버 오류로 인해 다음 게시물 번호 조회에 실패했습니다.",
+            error
+        }));
+    }
+};
+
 // POST /api/lookPost — 이미지 + 게시글 업로드
 exports.createPost = async (req, res) => {
-    console.log('--- Request Body ---');   // 확인용 로그 
+    console.log('--- Request Body ---');    // 확인용 로그 
     console.log(req.body);
     console.log('--- Request File ---');
     console.log(req.file);

@@ -19,6 +19,14 @@ async function findWeather(si, gungu, date, hour) {
     return UltraNowcast.findOne({ where: { si, gungu, baseDate, baseTime } });
 }
 
+exports.getNextPostNumber = async (user) => {
+    const user_id = user.user_id;
+    // 해당 사용자가 이미 등록한 게시물 수를 조회
+    const previousCount = await Post.count({ where: { user_id } });
+    // 다음 게시물 번호는 현재 게시물 수 + 1
+    return previousCount + 1;
+};
+
 exports.createPost = async (user, body, file) => {
     const {
         date,
